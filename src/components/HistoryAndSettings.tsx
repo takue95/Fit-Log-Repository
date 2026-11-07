@@ -57,7 +57,11 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   onImportData
 }) => {
   const [activeTab, setActiveTab] = useState<HistoryTab>(initialTab);
-  const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(history[0]?.id || null);
+  const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(() =>
+    history.reduce<CompletedWorkout | null>((latest, workout) =>
+      !latest || new Date(workout.date).getTime() > new Date(latest.date).getTime() ? workout : latest,
+    null)?.id ?? null
+  );
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const latestDate = history.reduce<Date | null>((latest, workout) => {
       const date = new Date(workout.date);
@@ -92,9 +96,10 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
     if (index < monthStart.getDay()) return null;
     return new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), index - monthStart.getDay() + 1);
   });
+  const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const visibleHistory = selectedDate
-    ? history.filter((workout) => workoutDateKey(workout.date) === selectedDate)
-    : history;
+    ? sortedHistory.filter((workout) => workoutDateKey(workout.date) === selectedDate)
+    : sortedHistory;
 
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
@@ -692,3 +697,4 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
     </div>
   );
 };
+
