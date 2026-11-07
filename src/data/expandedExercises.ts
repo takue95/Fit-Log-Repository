@@ -96,6 +96,7 @@ const movementCues: Record<Movement, { setup: string; action: string; return: st
 
 const seeds: ExerciseSeed[] = [
   // Chest
+  { id: 'barbell-incline-bench-press', name: 'Barbell Incline Bench Press', category: 'Chest', equipment: 'Barbell', primaryMuscles: ['Upper Chest'], secondaryMuscles: ['Anterior Deltoids', 'Triceps'], movement: 'press', rest: 120 },
   { id: 'decline-barbell-bench-press', name: 'Decline Barbell Bench Press', category: 'Chest', equipment: 'Barbell', primaryMuscles: ['Lower Pectorals'], secondaryMuscles: ['Triceps', 'Anterior Deltoids'], movement: 'press', rest: 120 },
   { id: 'decline-dumbbell-press', name: 'Decline Dumbbell Press', category: 'Chest', equipment: 'Dumbbell', primaryMuscles: ['Lower Pectorals'], secondaryMuscles: ['Triceps'], movement: 'press', rest: 90 },
   { id: 'smith-machine-bench-press', name: 'Smith Machine Bench Press', category: 'Chest', equipment: 'Smith Machine', primaryMuscles: ['Pectoralis Major'], secondaryMuscles: ['Triceps', 'Anterior Deltoids'], movement: 'press', rest: 120 },
@@ -110,6 +111,8 @@ const seeds: ExerciseSeed[] = [
   { id: 'dumbbell-pullover', name: 'Dumbbell Pullover', category: 'Chest', equipment: 'Dumbbell', primaryMuscles: ['Chest'], secondaryMuscles: ['Lats', 'Serratus'], movement: 'pulldown', rest: 75 },
 
   // Back
+  { id: 'machine-lat-pulldown', name: 'Machine Lat Pulldown', category: 'Back', equipment: 'Machine', primaryMuscles: ['Latissimus Dorsi'], secondaryMuscles: ['Biceps', 'Rhomboids'], movement: 'pulldown', rest: 90 },
+  { id: 'leverage-machine-iso-row', name: 'Leverage Machine Iso Row', category: 'Back', equipment: 'Machine', primaryMuscles: ['Mid Back', 'Latissimus Dorsi'], secondaryMuscles: ['Rear Deltoids', 'Biceps'], movement: 'row', rest: 90 },
   { id: 'pull-up', name: 'Pull-Up', category: 'Back', equipment: 'Bodyweight', primaryMuscles: ['Latissimus Dorsi'], secondaryMuscles: ['Biceps', 'Upper Back'], movement: 'pulldown', rest: 120 },
   { id: 'neutral-grip-lat-pulldown', name: 'Neutral-Grip Lat Pulldown', category: 'Back', equipment: 'Cable', primaryMuscles: ['Latissimus Dorsi'], secondaryMuscles: ['Biceps', 'Rhomboids'], movement: 'pulldown', rest: 90 },
   { id: 'close-grip-lat-pulldown', name: 'Close-Grip Lat Pulldown', category: 'Back', equipment: 'Cable', primaryMuscles: ['Latissimus Dorsi'], secondaryMuscles: ['Biceps'], movement: 'pulldown', rest: 90 },
@@ -128,6 +131,7 @@ const seeds: ExerciseSeed[] = [
   { id: 'dumbbell-shrug', name: 'Dumbbell Shrug', category: 'Back', equipment: 'Dumbbell', primaryMuscles: ['Upper Trapezius'], secondaryMuscles: ['Forearms'], movement: 'raise', rest: 60 },
 
   // Shoulders
+  { id: 'leverage-machine-shrug', name: 'Leverage Machine Shrug', category: 'Shoulders', equipment: 'Machine', primaryMuscles: ['Upper Trapezius'], secondaryMuscles: ['Forearms'], movement: 'raise', rest: 60 },
   { id: 'seated-dumbbell-shoulder-press', name: 'Seated Dumbbell Shoulder Press', category: 'Shoulders', equipment: 'Dumbbell', primaryMuscles: ['Anterior Deltoids'], secondaryMuscles: ['Lateral Deltoids', 'Triceps'], movement: 'press', rest: 90 },
   { id: 'arnold-press', name: 'Arnold Press', category: 'Shoulders', equipment: 'Dumbbell', primaryMuscles: ['Anterior Deltoids'], secondaryMuscles: ['Lateral Deltoids', 'Triceps'], movement: 'press', rest: 90 },
   { id: 'machine-shoulder-press', name: 'Machine Shoulder Press', category: 'Shoulders', equipment: 'Machine', primaryMuscles: ['Anterior Deltoids'], secondaryMuscles: ['Lateral Deltoids', 'Triceps'], movement: 'press', rest: 90 },
@@ -153,6 +157,7 @@ const seeds: ExerciseSeed[] = [
   { id: 'sissy-squat', name: 'Sissy Squat', category: 'Quads', equipment: 'Bodyweight', primaryMuscles: ['Quadriceps'], secondaryMuscles: ['Core'], movement: 'squat', rest: 75 },
 
   // Hamstrings
+  { id: 'barbell-stiff-leg-deadlift', name: 'Barbell Stiff-Leg Deadlift', category: 'Hamstrings', equipment: 'Barbell', primaryMuscles: ['Hamstrings'], secondaryMuscles: ['Glutes', 'Erector Spinae'], movement: 'hinge', rest: 120 },
   { id: 'dumbbell-romanian-deadlift', name: 'Dumbbell Romanian Deadlift', category: 'Hamstrings', equipment: 'Dumbbell', primaryMuscles: ['Hamstrings'], secondaryMuscles: ['Glutes', 'Erector Spinae'], movement: 'hinge', rest: 120 },
   { id: 'seated-leg-curl', name: 'Seated Leg Curl', category: 'Hamstrings', equipment: 'Machine', primaryMuscles: ['Hamstrings'], secondaryMuscles: ['Gastrocnemius'], movement: 'curl', rest: 75 },
   { id: 'lying-leg-curl', name: 'Lying Leg Curl', category: 'Hamstrings', equipment: 'Machine', primaryMuscles: ['Hamstrings'], secondaryMuscles: ['Gastrocnemius'], movement: 'curl', rest: 75 },
@@ -191,6 +196,7 @@ const seeds: ExerciseSeed[] = [
   { id: 'farmer-carry-trap-bar', name: 'Trap-Bar Farmer Carry', category: 'Forearms', equipment: 'Trap Bar', primaryMuscles: ['Grip', 'Forearms'], secondaryMuscles: ['Trapezius', 'Core'], movement: 'carry', rest: 90 },
 
   // Triceps
+  { id: 'cable-tricep-pushdown-v-bar', name: 'Cable Tricep Pushdown (V-Bar)', category: 'Triceps', equipment: 'Cable', primaryMuscles: ['Triceps Brachii'], movement: 'triceps', rest: 60 },
   { id: 'rope-triceps-pushdown', name: 'Rope Triceps Pushdown', category: 'Triceps', equipment: 'Cable', primaryMuscles: ['Triceps Brachii'], movement: 'triceps', rest: 60 },
   { id: 'overhead-rope-triceps-extension', name: 'Overhead Rope Triceps Extension', category: 'Triceps', equipment: 'Cable', primaryMuscles: ['Triceps Long Head'], secondaryMuscles: ['Triceps Brachii'], movement: 'triceps', rest: 60 },
   { id: 'dumbbell-overhead-triceps-extension', name: 'Dumbbell Overhead Triceps Extension', category: 'Triceps', equipment: 'Dumbbell', primaryMuscles: ['Triceps Long Head'], movement: 'triceps', rest: 60 },
@@ -225,3 +231,4 @@ export const EXPANDED_EXERCISES: Exercise[] = seeds.map((seed) => {
     defaultRestSeconds: seed.rest
   };
 });
+
