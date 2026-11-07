@@ -11,7 +11,7 @@ import {
   WorkoutSet 
 } from './types/fitness';
 import { INITIAL_EXERCISES } from './data/exercises';
-import { DEFAULT_ROUTINES, INITIAL_WORKOUT_HISTORY, INITIAL_BODY_MEASUREMENTS } from './data/routines';
+import { DEFAULT_ROUTINES } from './data/routines';
 import { Dashboard } from './components/Dashboard';
 import { ActiveWorkoutView } from './components/ActiveWorkout';
 import { RoutinesView } from './components/Routines';
@@ -79,12 +79,28 @@ export default function App() {
 
   const [history, setHistory] = useState<CompletedWorkout[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
-    return saved ? JSON.parse(saved) : INITIAL_WORKOUT_HISTORY;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      // Drop the original sample workouts for existing installs while preserving imported logs.
+      return parsed.filter((workout) => !/^history-\d+$/.test(workout?.id ?? ''));
+    } catch {
+      return [];
+    }
   });
 
   const [bodyWeights, setBodyWeights] = useState<BodyWeightEntry[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.BODY_WEIGHTS);
-    return saved ? JSON.parse(saved) : INITIAL_BODY_MEASUREMENTS;
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      // Remove the five sample weigh-ins shipped with the original demo build.
+      return parsed.filter((entry) => !/^bw-[1-5]$/.test(entry?.id ?? ''));
+    } catch {
+      return [];
+    }
   });
 
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => {
@@ -674,3 +690,4 @@ export default function App() {
     </div>
   );
 }
+
