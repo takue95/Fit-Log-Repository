@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity } from 'lucide-react';
+import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound } from 'lucide-react';
 import { 
   RoutineTemplate, 
   CompletedWorkout, 
@@ -36,6 +36,7 @@ const STORAGE_KEYS = {
 export default function App() {
   // Navigation: 0 = Dashboard, 1 = Routines, 2 = Active Workout, 3 = Analytics, 4 = History & Settings
   const [currentScreen, setCurrentScreen] = useState<number>(0);
+  const [historyInitialTab, setHistoryInitialTab] = useState<'history' | 'exercises' | 'settings'>('history');
 
   // Persistent States
   const [exercises, setExercises] = useState<Exercise[]>(() => {
@@ -414,6 +415,17 @@ export default function App() {
             <p className="text-[9px] text-neutral-400">Training log</p>
           </div>
         </div>
+        <button
+          onClick={() => {
+            setHistoryInitialTab('settings');
+            setCurrentScreen(4);
+          }}
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 text-xs font-semibold text-emerald-300 transition hover:border-emerald-800 hover:bg-neutral-900"
+          aria-label="Open profile and settings"
+        >
+          <UserRound className="h-4 w-4" aria-hidden="true" />
+          <span>Profile</span>
+        </button>
       </header>
 
       <main className="w-full max-w-[430px] flex-1 px-4 pt-4 pb-5">
@@ -430,7 +442,10 @@ export default function App() {
               onResumeActiveWorkout={() => setCurrentScreen(2)}
               onNavigateToRoutines={() => setCurrentScreen(1)}
               onNavigateToAnalytics={() => setCurrentScreen(3)}
-              onNavigateToHistory={() => setCurrentScreen(4)}
+              onNavigateToHistory={() => {
+                setHistoryInitialTab('history');
+                setCurrentScreen(4);
+              }}
               onAddBodyWeight={handleAddBodyWeight}
               onOpenPlateCalc={() => {
                 setPlateCalcInitialWeight(settings.weightUnit === 'lbs' ? 135 : 60);
@@ -518,6 +533,7 @@ export default function App() {
               history={history}
               exercises={exercises}
               settings={settings}
+              initialTab={historyInitialTab}
               onUpdateSettings={(newSt) => setSettings((prev) => ({ ...prev, ...newSt }))}
               onDeleteHistoryItem={handleDeleteHistoryItem}
               onExportData={handleExportData}
@@ -580,7 +596,10 @@ export default function App() {
             return (
               <button
                 key={item.screen}
-                onClick={() => setCurrentScreen(item.screen)}
+                onClick={() => {
+                  if (item.screen === 4) setHistoryInitialTab('history');
+                  setCurrentScreen(item.screen);
+                }}
                 className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition ${
                   isActive
                     ? 'text-emerald-400 font-bold'

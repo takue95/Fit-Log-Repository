@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Plus,
   Scale,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   Trophy
@@ -116,13 +117,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-5 animate-in fade-in duration-200">
-      <div className="pt-1 pb-1">
-        <p className="text-[10px] font-bold tracking-[0.13em] uppercase text-neutral-400">
-          {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+      <section className="relative isolate overflow-hidden rounded-[1.4rem] border border-emerald-900/70 bg-[radial-gradient(ellipse_at_95%_5%,rgba(41,70,50,0.8),rgba(24,35,27,0.92)_42%,rgba(19,25,21,1)_78%)] px-5 py-5">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-14 top-14 -z-10 h-44 w-44 rounded-full border border-emerald-200/10 shadow-[0_0_0_18px_rgba(87,120,98,0.07),0_0_0_37px_rgba(87,120,98,0.04)]" />
+        <p className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.13em] uppercase text-emerald-100/80">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+          {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
-        <h2 className="mt-1 text-[23px] leading-tight font-extrabold tracking-tight text-white">Ready for today’s work?</h2>
-        <p className="mt-1 text-xs text-neutral-400">One good session at a time.</p>
-      </div>
+        <h2 className="mt-3 text-[32px] leading-[1.08] font-extrabold tracking-tight text-white">
+          Make today<br />count.
+        </h2>
+        <blockquote className="mt-4 max-w-[18rem] border-l-2 border-emerald-400 pl-3 text-xs leading-relaxed text-neutral-300">
+          “Strength is built by the work you show up for.”
+        </blockquote>
+        <p className="mt-5 inline-flex items-center gap-2 text-[10px] text-neutral-300">
+          <Sparkles className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
+          One good session at a time.
+        </p>
+      </section>
 
       <button onClick={onNavigateToRoutines} className="w-full flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-3 text-left active:scale-[.99] transition">
         <span><span className="block text-[9px] font-bold tracking-[.12em] uppercase text-neutral-400">Your training split</span><span className="block mt-1 text-sm font-bold text-white">{splitLabel}</span><span className="block mt-0.5 text-[10px] text-neutral-400">Choose and manage your routines</span></span>

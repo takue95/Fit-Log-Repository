@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   History, 
   Settings as SettingsIcon, 
   BookOpen, 
   Calendar, 
+  ChevronLeft,
+  ChevronRight,
   Clock, 
   Dumbbell, 
   Trash2, 
@@ -21,10 +23,22 @@ import {
 } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
 
+type HistoryTab = 'history' | 'exercises' | 'settings';
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const workoutDateKey = (date: string) => toDateKey(new Date(date));
+
 interface HistoryAndSettingsProps {
   history: CompletedWorkout[];
   exercises: Exercise[];
   settings: UserSettings;
+  initialTab?: HistoryTab;
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onDeleteHistoryItem: (workoutId: string) => void;
   onExportData: () => void;
@@ -35,16 +49,27 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   history,
   exercises,
   settings,
+  initialTab = 'history',
   onUpdateSettings,
   onDeleteHistoryItem,
   onExportData,
   onImportData
 }) => {
-  const [activeTab, setActiveTab] = useState<'history' | 'exercises' | 'settings'>('history');
+  const [activeTab, setActiveTab] = useState<HistoryTab>(initialTab);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(history[0]?.id || null);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const latestDate = history.reduce<Date | null>((latest, workout) => {
+      const date = new Date(workout.date);
+      return !latest || date > latest ? date : latest;
+    }, null) ?? new Date();
+    return new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [selectedMuscleFilter, setSelectedMuscleFilter] = useState('All');
   const [selectedExerciseForModal, setSelectedExerciseForModal] = useState<Exercise | null>(null);
+
+  useEffect(() => setActiveTab(initialTab), [initialTab]);
 
   const categories = ['All', 'Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Biceps', 'Triceps', 'Core'];
 
@@ -54,13 +79,29 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
     return matchesSearch && matchesMuscle;
   });
 
+  const workoutsByDate = new Map<string, CompletedWorkout[]>();
+  history.forEach((workout) => {
+    const dateKey = workoutDateKey(workout.date);
+    workoutsByDate.set(dateKey, [...(workoutsByDate.get(dateKey) ?? []), workout]);
+  });
+
+  const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+  const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+  const calendarCells = Array.from({ length: monthStart.getDay() + daysInMonth }, (_, index) => {
+    if (index < monthStart.getDay()) return null;
+    return new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), index - monthStart.getDay() + 1);
+  });
+  const visibleHistory = selectedDate
+    ? history.filter((workout) => workoutDateKey(workout.date) === selectedDate)
+    : history;
+
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
       {/* Top Navigation Tabs */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">History & Settings</h2>
-          <p className="text-xs text-neutral-400">Your training record, exercise guide, and preferences</p>
+          <h2 className="text-xl font-extrabold text-white tracking-tight">Training log</h2>
+          <p className="text-xs text-neutral-400">Workouts, exercise guides, and preferences</p>
         </div>
 
       </div>
@@ -106,13 +147,82 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
       {/* TAB 1: HISTORY LOG */}
       {activeTab === 'history' && (
         <div className="space-y-3.5">
-          {history.length === 0 ? (
+          <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-emerald-300" />
+                <h3 className="text-sm font-bold text-white">Workout calendar</h3>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-[108px] text-center text-xs font-semibold text-neutral-200">
+                  {calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
+                <span key={weekday} className="pb-1.5 text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{weekday}</span>
+              ))}
+              {calendarCells.map((date, index) => {
+                if (!date) return <span key={`blank-${index}`} aria-hidden="true" />;
+                const dateKey = toDateKey(date);
+                const workoutCount = workoutsByDate.get(dateKey)?.length ?? 0;
+                const isSelected = selectedDate === dateKey;
+                return (
+                  <button
+                    key={dateKey}
+                    type="button"
+                    onClick={() => setSelectedDate((current) => current === dateKey ? null : dateKey)}
+                    aria-label={`${date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}${workoutCount ? `, ${workoutCount} workout${workoutCount === 1 ? '' : 's'}` : ', no workouts'}${isSelected ? ', selected' : ''}`}
+                    aria-pressed={isSelected}
+                    className={`relative mx-auto my-0.5 grid h-9 w-9 place-items-center rounded-xl text-xs transition ${isSelected ? 'bg-emerald-500 font-bold text-neutral-950' : workoutCount ? 'bg-emerald-950/60 font-semibold text-emerald-200 hover:bg-emerald-900/70' : 'text-neutral-300 hover:bg-neutral-800'}`}
+                  >
+                    {date.getDate()}
+                    {workoutCount > 0 && <span className={`absolute bottom-1 h-1 w-1 rounded-full ${isSelected ? 'bg-neutral-950' : 'bg-emerald-300'}`} />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-neutral-800 pt-2">
+              <span className="flex items-center gap-1.5 text-[10px] text-neutral-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />Workout logged</span>
+              {selectedDate ? (
+                <button type="button" onClick={() => setSelectedDate(null)} className="text-[10px] font-semibold text-emerald-300">Show all workouts</button>
+              ) : (
+                <span className="text-[10px] text-neutral-500">Tap a day to filter</span>
+              )}
+            </div>
+          </section>
+
+          {selectedDate && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-semibold text-neutral-300">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+              <span className="text-[10px] text-neutral-500">{visibleHistory.length} workout{visibleHistory.length === 1 ? '' : 's'}</span>
+            </div>
+          )}
+
+          {visibleHistory.length === 0 ? (
             <div className="py-16 text-center text-neutral-500 flex flex-col items-center gap-3">
               <History className="w-10 h-10 text-neutral-700" />
-              <p className="text-sm">No workouts logged yet. Finish your first workout to see it here!</p>
+              <p className="text-sm">{selectedDate ? 'No workout logged on this day.' : 'No workouts logged yet. Finish your first workout to see it here!'}</p>
             </div>
           ) : (
-            history.map((workout) => {
+            visibleHistory.map((workout) => {
               const isExpanded = expandedWorkoutId === workout.id;
               const dateObj = new Date(workout.date);
 
