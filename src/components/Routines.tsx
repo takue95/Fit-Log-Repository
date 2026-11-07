@@ -413,7 +413,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                             step={1}
                             onValueChange={(value) => {
                               setSelectedExIds((prev) =>
-                                prev.map((it, i) => (i === idx ? { ...it, defaultSets: value } : it))
+                                prev.map((it, i) => (i === idx ? { ...it, defaultSets: Math.round(value) } : it))
                               );
                             }}
                             aria-label={`${ex?.name || 'Exercise'} sets`}
@@ -430,7 +430,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                             step={1}
                             onValueChange={(value) => {
                               setSelectedExIds((prev) =>
-                                prev.map((it, i) => (i === idx ? { ...it, defaultReps: value } : it))
+                                prev.map((it, i) => (i === idx ? { ...it, defaultReps: Math.round(value) } : it))
                               );
                             }}
                             aria-label={`${ex?.name || 'Exercise'} reps`}
