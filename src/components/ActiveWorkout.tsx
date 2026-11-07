@@ -660,7 +660,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
               {/* Compact one-line set logger */}
               <div className="px-2 pb-2 pt-1">
-                <div className="grid grid-cols-[1.5rem_2.6rem_minmax(0,1.3fr)_minmax(0,1fr)_2.6rem_1.8rem] items-center gap-1 border-b border-neutral-800/70 px-1 pb-1.5 text-center text-[8px] font-bold uppercase tracking-wide text-neutral-500">
+                <div className="grid grid-cols-[1.5rem_2.6rem_repeat(3,minmax(0,1fr))_1.8rem] items-center gap-1 border-b border-neutral-800/70 px-1 pb-1.5 text-center text-[8px] font-bold uppercase tracking-wide text-neutral-500">
                   <span>Set</span><span>Prev</span>
                   <span>{exercise.equipment === 'Dumbbell' ? 'Wt/ea' : `Wt (${settings.weightUnit})`}</span>
                   <span>Reps</span><span>RPE</span><span>✓</span>
@@ -672,12 +672,12 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     const isManualWeight = !!manualInputSets[set.id]?.weight;
                     const isManualReps = !!manualInputSets[set.id]?.reps;
                     const hasCurrentWeightInOptions = weightOptions.some((option) => option.value === set.weight);
-                    const setControlClass = 'h-9 min-w-0 w-full rounded-lg border border-neutral-700/80 bg-neutral-950 px-0.5 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none';
+                    const setControlClass = 'h-8 min-w-0 w-full rounded-lg border border-neutral-700/80 bg-neutral-950 pl-1 pr-4 text-center font-mono text-base font-bold text-white focus:border-emerald-500 focus:outline-none appearance-none';
 
                     return (
                       <div
                         key={set.id}
-                        className={`grid grid-cols-[1.5rem_2.6rem_minmax(0,1.3fr)_minmax(0,1fr)_2.6rem_1.8rem] items-center gap-1 px-1 py-1.5 ${set.completed ? 'bg-emerald-950/20' : ''}`}
+                        className={`grid grid-cols-[1.5rem_2.6rem_repeat(3,minmax(0,1fr))_1.8rem] items-center gap-1 px-1 py-1.5 ${set.completed ? 'bg-emerald-950/20' : ''}`}
                       >
                         <button
                           type="button"
@@ -693,7 +693,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                           {set.previousWeight !== undefined && set.previousWeight > 0 ? `${set.previousWeight}×${set.previousReps || 8}` : '—'}
                         </span>
 
-                        <div className="flex min-w-0 items-center gap-0.5">
+                        <div className="relative min-w-0">
                           {isManualWeight ? (
                             <NumericInput value={set.weight} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)} min={0} step={exercise.equipment === 'Dumbbell' ? 1 : 2.5} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass} />
                           ) : (
@@ -703,10 +703,10 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                               <option value="__custom__">Custom</option>
                             </select>
                           )}
-                          <button type="button" onClick={() => toggleManualInput(set.id, 'weight')} className="grid h-7 w-4 shrink-0 place-items-center text-neutral-500 hover:text-neutral-200" aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}><Edit3 className="h-3 w-3" /></button>
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'weight')} className="absolute right-0 top-0 grid h-8 w-4 place-items-center rounded-r-lg bg-neutral-900 text-neutral-500 hover:text-neutral-200" aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}><Edit3 className="h-2.5 w-2.5" /></button>
                         </div>
 
-                        <div className="flex min-w-0 items-center gap-0.5">
+                        <div className="relative min-w-0">
                           {isManualReps ? (
                             <NumericInput value={set.reps} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))} min={1} step={1} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass} />
                           ) : (
@@ -716,10 +716,10 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                               <option value="__custom__">Custom</option>
                             </select>
                           )}
-                          <button type="button" onClick={() => toggleManualInput(set.id, 'reps')} className="grid h-7 w-4 shrink-0 place-items-center text-neutral-500 hover:text-neutral-200" aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}><Edit3 className="h-3 w-3" /></button>
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'reps')} className="absolute right-0 top-0 grid h-8 w-4 place-items-center rounded-r-lg bg-neutral-900 text-neutral-500 hover:text-neutral-200" aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}><Edit3 className="h-2.5 w-2.5" /></button>
                         </div>
 
-                        <select value={set.rpe || ''} onChange={(event) => updateSetValue(exercise.id, set.id, 'rpe', event.target.value ? parseFloat(event.target.value) : undefined)} aria-label={`Set ${sIdx + 1} RPE`} className="h-8 w-full min-w-0 rounded-lg border border-neutral-700/80 bg-neutral-950 px-0.5 text-center font-mono text-[11px] text-neutral-200 focus:border-emerald-500 focus:outline-none">
+                        <select value={set.rpe || ''} onChange={(event) => updateSetValue(exercise.id, set.id, 'rpe', event.target.value ? parseFloat(event.target.value) : undefined)} aria-label={`Set ${sIdx + 1} RPE`} className={`${setControlClass} text-neutral-200`}>
                           <option value="">—</option><option value="6">6</option><option value="7">7</option><option value="7.5">7.5</option><option value="8">8</option><option value="8.5">8.5</option><option value="9">9</option><option value="9.5">9.5</option><option value="10">10</option>
                         </select>
 
