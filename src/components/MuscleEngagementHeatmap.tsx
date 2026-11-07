@@ -217,10 +217,12 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       const lowerName = exName.toLowerCase();
 
       if (lowerCat.includes('chest') || lowerName.includes('bench') || lowerName.includes('chest') || lowerName.includes('push-up')) return 'Chest';
+      // Respect the specific hamstring category before the broad deadlift rule,
+      // so Romanian deadlifts are attributed to hamstrings like the anatomy map.
+      if (lowerCat.includes('hamstring') || lowerName.includes('rdl') || lowerName.includes('romanian') || lowerName.includes('leg curl')) return 'Hamstrings';
       if (lowerCat.includes('back') || lowerName.includes('deadlift') || lowerName.includes('row') || lowerName.includes('lat') || lowerName.includes('pull-up')) return 'Back';
       if (lowerCat.includes('shoulder') || (lowerName.includes('press') && !lowerName.includes('bench') && !lowerName.includes('leg')) || lowerName.includes('lateral raise') || lowerName.includes('face pull')) return 'Shoulders';
       if (lowerCat.includes('quad') || lowerName.includes('squat') || lowerName.includes('leg press') || lowerName.includes('lunge') || lowerName.includes('leg extension')) return 'Quads';
-      if (lowerCat.includes('hamstring') || lowerName.includes('rdl') || lowerName.includes('romanian') || lowerName.includes('leg curl')) return 'Hamstrings';
       if (lowerCat.includes('glute') || lowerName.includes('hip thrust')) return 'Glutes';
       if (lowerCat.includes('forearm') || lowerName.includes('wrist curl') || lowerName.includes('farmer carry')) return 'Forearms';
       if (lowerCat.includes('bicep') || lowerName.includes('curl')) return 'Biceps';
@@ -475,7 +477,11 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
         </div>
       </div>
 
-      {/* Top 3 Diagnostic Cards */}
+      {/* Overall summary, separate from the selected muscle diagnostics below. */}
+      <div className="flex items-center justify-between gap-2 -mb-3 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+        <span>Overall training</span>
+        <span>All muscle groups · Last {timeRangeDays} days</span>
+      </div>
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="bg-neutral-950/80 border border-neutral-800 p-3 rounded-2xl flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
@@ -764,3 +770,4 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     </div>
   );
 };
+
