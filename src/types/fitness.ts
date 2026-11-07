@@ -6,10 +6,16 @@ export type MuscleGroup =
   | 'Hamstrings'
   | 'Glutes'
   | 'Biceps'
+  | 'Forearms'
   | 'Triceps'
   | 'Core'
   | 'Calves'
   | 'Cardio';
+
+export const MUSCLE_GROUPS: MuscleGroup[] = [
+  'Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Glutes',
+  'Biceps', 'Forearms', 'Triceps', 'Core', 'Calves', 'Cardio'
+];
 
 export type EquipmentType = 
   | 'Barbell'
@@ -18,7 +24,19 @@ export type EquipmentType =
   | 'Machine'
   | 'Bodyweight'
   | 'Kettlebell'
+  | 'EZ Curl Bar'
+  | 'Smith Machine'
+  | 'Trap Bar'
+  | 'Landmine'
+  | 'Resistance Band'
+  | 'Suspension Trainer'
   | 'Other';
+
+export const EQUIPMENT_TYPES: EquipmentType[] = [
+  'Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell',
+  'EZ Curl Bar', 'Smith Machine', 'Trap Bar', 'Landmine', 'Resistance Band',
+  'Suspension Trainer', 'Other'
+];
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 

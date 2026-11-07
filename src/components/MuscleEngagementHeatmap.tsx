@@ -27,6 +27,7 @@ export type MuscleKey =
   | 'Hamstrings'
   | 'Glutes'
   | 'Biceps'
+  | 'Forearms'
   | 'Triceps'
   | 'Core'
   | 'Calves';
@@ -128,6 +129,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       Triceps: { displayName: 'Triceps Brachii', category: 'Push', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
       Back: { displayName: 'Back & Lats', category: 'Pull', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
       Biceps: { displayName: 'Biceps Brachii', category: 'Pull', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
+      Forearms: { displayName: 'Forearms & Grip', category: 'Pull', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
       Quads: { displayName: 'Quadriceps', category: 'Legs', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
       Hamstrings: { displayName: 'Hamstrings', category: 'Legs', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
       Glutes: { displayName: 'Gluteus Maximus', category: 'Legs', setsCount: 0, totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
@@ -145,6 +147,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       if (lowerCat.includes('quad') || lowerName.includes('squat') || lowerName.includes('leg press') || lowerName.includes('lunge') || lowerName.includes('leg extension')) return 'Quads';
       if (lowerCat.includes('hamstring') || lowerName.includes('rdl') || lowerName.includes('romanian') || lowerName.includes('leg curl')) return 'Hamstrings';
       if (lowerCat.includes('glute') || lowerName.includes('hip thrust')) return 'Glutes';
+      if (lowerCat.includes('forearm') || lowerName.includes('wrist curl') || lowerName.includes('farmer carry')) return 'Forearms';
       if (lowerCat.includes('bicep') || lowerName.includes('curl')) return 'Biceps';
       if (lowerCat.includes('tricep') || lowerName.includes('pushdown') || lowerName.includes('skull crusher') || lowerName.includes('dip')) return 'Triceps';
       if (lowerCat.includes('calf') || lowerCat.includes('calves') || lowerName.includes('calf')) return 'Calves';

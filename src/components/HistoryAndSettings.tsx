@@ -21,7 +21,7 @@ import {
   ExternalLink,
   User
 } from 'lucide-react';
-import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
+import { CompletedWorkout, Exercise, UserSettings, MUSCLE_GROUPS } from '../types/fitness';
 import { NumericInput } from './NumericInput';
 
 type HistoryTab = 'history' | 'exercises' | 'settings';
@@ -72,7 +72,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
 
-  const categories = ['All', 'Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Biceps', 'Triceps', 'Core'];
+  const categories = ['All', ...MUSCLE_GROUPS];
 
   const filteredExercises = exercises.filter((ex) => {
     const matchesSearch = ex.name.toLowerCase().includes(exerciseSearch.toLowerCase());

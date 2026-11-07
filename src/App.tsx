@@ -33,16 +33,31 @@ const STORAGE_KEYS = {
   SETTINGS: 'fitlog_settings_v1'
 };
 
+const loadExerciseLibrary = (): Exercise[] => {
+  const saved = localStorage.getItem(STORAGE_KEYS.EXERCISES);
+  if (!saved) return INITIAL_EXERCISES;
+  try {
+    const savedExercises: Exercise[] = JSON.parse(saved);
+    if (!Array.isArray(savedExercises)) return INITIAL_EXERCISES;
+
+    // Add new built-in entries for existing users while preserving edits and custom exercises.
+    const merged = new Map(INITIAL_EXERCISES.map((exercise) => [exercise.id, exercise]));
+    savedExercises.forEach((exercise) => {
+      if (exercise?.id) merged.set(exercise.id, exercise);
+    });
+    return Array.from(merged.values());
+  } catch {
+    return INITIAL_EXERCISES;
+  }
+};
+
 export default function App() {
   // Navigation: 0 = Dashboard, 1 = Routines, 2 = Active Workout, 3 = Analytics, 4 = History & Settings
   const [currentScreen, setCurrentScreen] = useState<number>(0);
   const [historyInitialTab, setHistoryInitialTab] = useState<'history' | 'exercises' | 'settings'>('history');
 
   // Persistent States
-  const [exercises, setExercises] = useState<Exercise[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.EXERCISES);
-    return saved ? JSON.parse(saved) : INITIAL_EXERCISES;
-  });
+  const [exercises, setExercises] = useState<Exercise[]>(loadExerciseLibrary);
 
   const [routines, setRoutines] = useState<RoutineTemplate[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ROUTINES);

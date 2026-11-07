@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, Plus, Check, Info, Sparkles } from 'lucide-react';
-import { Exercise, MuscleGroup, EquipmentType } from '../../types/fitness';
+import { Exercise, MuscleGroup, EquipmentType, EQUIPMENT_TYPES, MUSCLE_GROUPS } from '../../types/fitness';
 
 interface ExercisePickerModalProps {
   exercises: Exercise[];
@@ -26,8 +26,8 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
   const [customCategory, setCustomCategory] = useState<MuscleGroup>('Chest');
   const [customEquipment, setCustomEquipment] = useState<EquipmentType>('Barbell');
 
-  const categories = ['All', 'Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Biceps', 'Triceps', 'Core', 'Calves'];
-  const equipmentOptions = ['All', 'Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight'];
+  const categories = ['All', ...MUSCLE_GROUPS];
+  const equipmentOptions = ['All', ...EQUIPMENT_TYPES];
 
   const filteredExercises = useMemo(() => {
     return exercises.filter((ex) => {

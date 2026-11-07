@@ -1,6 +1,7 @@
 import { Exercise } from '../types/fitness';
+import { EXPANDED_EXERCISES } from './expandedExercises';
 
-export const INITIAL_EXERCISES: Exercise[] = [
+const CORE_EXERCISES: Exercise[] = [
   // CHEST
   {
     id: 'barbell-bench-press',
@@ -382,3 +383,5 @@ export const INITIAL_EXERCISES: Exercise[] = [
     defaultRestSeconds: 60
   }
 ];
+
+export const INITIAL_EXERCISES: Exercise[] = [...CORE_EXERCISES, ...EXPANDED_EXERCISES];
