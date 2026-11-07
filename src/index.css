@@ -64,6 +64,12 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; }
 
+/* iOS Safari zooms the page when a text control uses less than 16px text. Keep
+   every text-entry control at the safe size, not only workout number fields. */
 @media (max-width: 639px) {
-  input.numeric-entry { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
