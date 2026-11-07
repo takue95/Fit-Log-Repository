@@ -1,0 +1,6 @@
+{
+  "name": "FitLog Workout Tracker",
+  "description": "Comprehensive workout tracker and fitness log featuring live set logging, rest timers, routine builders, exercise database, and visual strength analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

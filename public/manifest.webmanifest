@@ -1,0 +1,12 @@
+{
+  "name": "FitLog Workout Tracker",
+  "short_name": "FitLog",
+  "description": "Log bodybuilding workouts, routines, sets, and strength progress.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090a0f",
+  "theme_color": "#090a0f",
+  "orientation": "portrait",
+  "icons": [{ "src": "./fitlog-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
