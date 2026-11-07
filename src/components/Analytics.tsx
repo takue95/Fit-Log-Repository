@@ -489,7 +489,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               value={newBwValue}
               onFocus={(event) => event.currentTarget.select()}
               onChange={(e) => setNewBwValue(e.target.value)}
-              className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="numeric-entry flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               autoFocus
             />
             <button

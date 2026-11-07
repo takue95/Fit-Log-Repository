@@ -658,382 +658,79 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                 </div>
               )}
 
-              {/* Sets Table */}
-              <div className="hidden p-3 sm:block">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 border-b border-neutral-800/80 pb-2">
-                      <th className="py-2 pl-2 w-10 text-center">Set</th>
-                      <th className="py-2 px-1 text-center w-20">Previous</th>
-                      <th className="py-2 px-1 text-center min-w-[110px]">
-                        {exercise.equipment === 'Dumbbell'
-                          ? `WEIGHT (${settings.weightUnit.toUpperCase()} EA)`
-                          : `WEIGHT (${settings.weightUnit.toUpperCase()})`}
-                      </th>
-                      <th className="py-2 px-1 text-center min-w-[70px]">Reps</th>
-                      <th className="py-2 px-1 text-center w-14">RPE</th>
-                      <th className="py-2 pr-2 text-center w-12">Done</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-800/40">
-                    {exercise.sets.map((set, sIdx) => {
-                      const isWarmup = set.type === 'warmup';
-                      const isDrop = set.type === 'drop';
-                      const isManualWeight = !!manualInputSets[set.id]?.weight;
-                      const isManualReps = !!manualInputSets[set.id]?.reps;
+              {/* Compact one-line set logger */}
+              <div className="px-2 pb-2 pt-1">
+                <div className="grid grid-cols-[1.5rem_2.6rem_minmax(0,1.3fr)_minmax(0,1fr)_2.6rem_1.8rem] items-center gap-1 border-b border-neutral-800/70 px-1 pb-1.5 text-center text-[8px] font-bold uppercase tracking-wide text-neutral-500">
+                  <span>Set</span><span>Prev</span>
+                  <span>{exercise.equipment === 'Dumbbell' ? 'Wt/ea' : `Wt (${settings.weightUnit})`}</span>
+                  <span>Reps</span><span>RPE</span><span>✓</span>
+                </div>
+                <div className="divide-y divide-neutral-800/50">
+                  {exercise.sets.map((set, sIdx) => {
+                    const isWarmup = set.type === 'warmup';
+                    const isDrop = set.type === 'drop';
+                    const isManualWeight = !!manualInputSets[set.id]?.weight;
+                    const isManualReps = !!manualInputSets[set.id]?.reps;
+                    const hasCurrentWeightInOptions = weightOptions.some((option) => option.value === set.weight);
+                    const setControlClass = 'h-9 min-w-0 w-full rounded-lg border border-neutral-700/80 bg-neutral-950 px-0.5 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none';
 
-                      // Ensure current set weight is in options if not standard
-                      const hasCurrentWeightInOptions = weightOptions.some(
-                        (opt) => opt.value === set.weight
-                      );
+                    return (
+                      <div
+                        key={set.id}
+                        className={`grid grid-cols-[1.5rem_2.6rem_minmax(0,1.3fr)_minmax(0,1fr)_2.6rem_1.8rem] items-center gap-1 px-1 py-1.5 ${set.completed ? 'bg-emerald-950/20' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextType: SetType = set.type === 'normal' ? 'warmup' : set.type === 'warmup' ? 'drop' : 'normal';
+                            updateSetValue(exercise.id, set.id, 'type', nextType);
+                          }}
+                          className={`grid h-6 w-6 place-items-center rounded-md font-mono text-[10px] font-bold ${isWarmup ? 'border border-emerald-500/40 bg-emerald-500/20 text-emerald-300' : isDrop ? 'border border-neutral-500/40 bg-neutral-500/20 text-neutral-300' : 'bg-neutral-800 text-neutral-200'}`}
+                          aria-label={`Set ${sIdx + 1}, ${isWarmup ? 'warmup' : isDrop ? 'drop set' : 'normal set'}; tap to change type`}
+                        >{isWarmup ? 'W' : isDrop ? 'D' : sIdx + 1}</button>
 
-                      return (
-                        <tr
-                          key={set.id}
-                          className={`transition-colors ${
-                            set.completed
-                              ? 'bg-emerald-950/20'
-                              : 'hover:bg-neutral-800/30'
-                          }`}
-                        >
-                          {/* Set badge */}
-                          <td className="py-2.5 pl-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextType: SetType =
-                                  set.type === 'normal'
-                                    ? 'warmup'
-                                    : set.type === 'warmup'
-                                    ? 'drop'
-                                    : 'normal';
-                                updateSetValue(exercise.id, set.id, 'type', nextType);
-                              }}
-                              className={`w-6 h-6 rounded-md font-mono font-bold text-[11px] inline-flex items-center justify-center transition ${
-                                isWarmup
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                  : isDrop
-                                  ? 'bg-neutral-500/20 text-neutral-400 border border-neutral-500/40'
-                                  : 'bg-neutral-800 text-neutral-300'
-                              }`}
-                              title="Tap to toggle set type (Warmup / Drop / Normal)"
-                            >
-                              {isWarmup ? 'W' : isDrop ? 'D' : sIdx + 1}
-                            </button>
-                          </td>
+                        <span className="truncate text-center font-mono text-[9px] text-neutral-500" title={set.previousWeight && set.previousWeight > 0 ? `Previous: ${set.previousWeight} × ${set.previousReps || 8}` : 'New set'}>
+                          {set.previousWeight !== undefined && set.previousWeight > 0 ? `${set.previousWeight}×${set.previousReps || 8}` : '—'}
+                        </span>
 
-                          {/* Previous target */}
-                          <td className="py-2.5 px-1 text-center text-neutral-500 font-mono text-[11px]">
-                            {set.previousWeight !== undefined && set.previousWeight > 0
-                              ? `${set.previousWeight} × ${set.previousReps || 8}`
-                              : '—'}
-                          </td>
-
-                          {/* Weight input with Dropdown (differentiating Dumbbells vs Barbell) */}
-                          <td className="py-2.5 px-1 text-center">
-                            <div className="inline-flex items-center justify-center gap-1">
-                              {isManualWeight ? (
-                                <NumericInput
-                                  value={set.weight}
-                                  onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)}
-                                  min={0}
-                                  step={exercise.equipment === 'Dumbbell' ? 1 : 2.5}
-                                  className="h-10 w-28 sm:w-32 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                                  placeholder="0"
-                                  aria-label={`Set ${sIdx + 1} weight`}
-                                />
-                              ) : (
-                                <select
-                                  value={set.weight}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '__custom__') {
-                                      toggleManualInput(set.id, 'weight');
-                                    } else {
-                                      updateSetValue(
-                                        exercise.id,
-                                        set.id,
-                                        'weight',
-                                        parseFloat(val) || 0
-                                      );
-                                    }
-                                  }}
-                                  className="h-10 w-28 sm:w-32 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white transition hover:border-neutral-600 focus:border-emerald-500 focus:outline-none cursor-pointer"
-                                >
-                                  {!hasCurrentWeightInOptions && set.weight > 0 && (
-                                    <option value={set.weight}>
-                                      {set.weight} {settings.weightUnit}
-                                      {exercise.equipment === 'Dumbbell' ? ' (ea)' : ''}
-                                    </option>
-                                  )}
-                                  {weightOptions.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                  <option value="__custom__">⚙ Custom...</option>
-                                </select>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() => toggleManualInput(set.id, 'weight')}
-                                className="p-1 rounded text-neutral-500 hover:text-neutral-300 transition"
-                                title={isManualWeight ? 'Switch to dropdown' : 'Type custom weight'}
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </td>
-
-                          {/* Reps input with Dropdown (similar to RPE selector) */}
-                          <td className="py-2.5 px-1 text-center">
-                            <div className="inline-flex items-center justify-center gap-1">
-                              {isManualReps ? (
-                                <NumericInput
-                                  value={set.reps}
-                                  onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))}
-                                  min={1}
-                                  step={1}
-                                  className="h-10 w-16 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                                  placeholder="Reps"
-                                  aria-label={`Set ${sIdx + 1} reps`}
-                                />
-                              ) : (
-                                <select
-                                  value={set.reps}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '__custom__') {
-                                      toggleManualInput(set.id, 'reps');
-                                    } else {
-                                      updateSetValue(
-                                        exercise.id,
-                                        set.id,
-                                        'reps',
-                                        parseInt(val) || 0
-                                      );
-                                    }
-                                  }}
-                                  className="h-10 w-16 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white transition hover:border-neutral-600 focus:border-emerald-500 focus:outline-none cursor-pointer"
-                                >
-                                  {!standardRepOptions.includes(set.reps) && set.reps > 0 && (
-                                    <option value={set.reps}>{set.reps} reps</option>
-                                  )}
-                                  {standardRepOptions.map((rep) => (
-                                    <option key={rep} value={rep}>
-                                      {rep}
-                                    </option>
-                                  ))}
-                                  <option value="__custom__">Custom</option>
-                                </select>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() => toggleManualInput(set.id, 'reps')}
-                                className="p-1 rounded text-neutral-500 hover:text-neutral-300 transition"
-                                title={isManualReps ? 'Switch to dropdown' : 'Type custom reps'}
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </td>
-
-                          {/* RPE selector */}
-                          <td className="py-2.5 px-1 text-center">
-                            <select
-                              value={set.rpe || ''}
-                              onChange={(e) =>
-                                updateSetValue(
-                                  exercise.id,
-                                  set.id,
-                                  'rpe',
-                                  e.target.value ? parseFloat(e.target.value) : undefined
-                                )
-                              }
-                              className="bg-neutral-950 border border-neutral-700/80 rounded-lg px-1 py-1 text-center text-[11px] text-neutral-300 focus:outline-none font-mono cursor-pointer"
-                            >
-                              <option value="">-</option>
-                              <option value="6">6</option>
-                              <option value="7">7</option>
-                              <option value="7.5">7.5</option>
-                              <option value="8">8</option>
-                              <option value="8.5">8.5</option>
-                              <option value="9">9</option>
-                              <option value="9.5">9.5</option>
-                              <option value="10">10</option>
+                        <div className="flex min-w-0 items-center gap-0.5">
+                          {isManualWeight ? (
+                            <NumericInput value={set.weight} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)} min={0} step={exercise.equipment === 'Dumbbell' ? 1 : 2.5} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass} />
+                          ) : (
+                            <select value={set.weight} onChange={(event) => { const value = event.target.value; if (value === '__custom__') toggleManualInput(set.id, 'weight'); else updateSetValue(exercise.id, set.id, 'weight', parseFloat(value) || 0); }} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass}>
+                              {!hasCurrentWeightInOptions && set.weight > 0 && <option value={set.weight}>{set.weight}</option>}
+                              {weightOptions.map((option) => <option key={option.value} value={option.value}>{String(option.value)}</option>)}
+                              <option value="__custom__">Custom</option>
                             </select>
-                          </td>
-
-                          {/* Complete checkmark */}
-                          <td className="py-2.5 pr-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => toggleSetComplete(exercise.id, set.id)}
-                              className={`w-7 h-7 rounded-lg inline-flex items-center justify-center transition transform active:scale-90 shadow-sm ${
-                                set.completed
-                                  ? 'bg-emerald-500 text-neutral-950 shadow-emerald-500/30'
-                                  : 'bg-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-700'
-                              }`}
-                            >
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Compact set editor for phones: no horizontal scrolling */}
-              <div className="space-y-2 p-3 sm:hidden">
-                {exercise.sets.map((set, sIdx) => {
-                  const isWarmup = set.type === 'warmup';
-                  const isDrop = set.type === 'drop';
-                  const isManualWeight = !!manualInputSets[set.id]?.weight;
-                  const isManualReps = !!manualInputSets[set.id]?.reps;
-                  const hasCurrentWeightInOptions = weightOptions.some((option) => option.value === set.weight);
-                  const previousLabel = set.previousWeight !== undefined && set.previousWeight > 0
-                    ? `Prev ${set.previousWeight} × ${set.previousReps || 8}`
-                    : 'New set';
-
-                  return (
-                    <section
-                      key={set.id}
-                      className={`rounded-xl border p-3 ${set.completed ? 'border-emerald-900/70 bg-emerald-950/20' : 'border-neutral-800 bg-neutral-900/50'}`}
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nextType: SetType = set.type === 'normal' ? 'warmup' : set.type === 'warmup' ? 'drop' : 'normal';
-                              updateSetValue(exercise.id, set.id, 'type', nextType);
-                            }}
-                            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-bold ${isWarmup ? 'border border-emerald-500/40 bg-emerald-500/20 text-emerald-300' : isDrop ? 'border border-neutral-500/40 bg-neutral-500/20 text-neutral-300' : 'bg-neutral-800 text-neutral-200'}`}
-                            aria-label={`Set ${sIdx + 1}, ${isWarmup ? 'warmup' : isDrop ? 'drop set' : 'normal set'}; tap to change type`}
-                          >
-                            {isWarmup ? 'W' : isDrop ? 'D' : sIdx + 1}
-                          </button>
-                          <div className="min-w-0">
-                            <span className="block text-[11px] font-semibold text-neutral-200">Set {sIdx + 1}</span>
-                            <span className="block truncate font-mono text-[10px] text-neutral-500">{previousLabel}</span>
-                          </div>
+                          )}
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'weight')} className="grid h-7 w-4 shrink-0 place-items-center text-neutral-500 hover:text-neutral-200" aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}><Edit3 className="h-3 w-3" /></button>
                         </div>
-                        <div className="flex shrink-0 items-end gap-2">
-                          <label className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-500">
-                            RPE
-                            <select
-                              value={set.rpe || ''}
-                              onChange={(event) => updateSetValue(exercise.id, set.id, 'rpe', event.target.value ? parseFloat(event.target.value) : undefined)}
-                              aria-label={`Set ${sIdx + 1} RPE`}
-                              className="h-9 w-[3.7rem] rounded-lg border border-neutral-700 bg-neutral-950 px-1 text-center font-mono text-xs text-neutral-200 focus:border-emerald-500 focus:outline-none"
-                            >
-                              <option value="">—</option>
-                              <option value="6">6</option><option value="7">7</option><option value="7.5">7.5</option>
-                              <option value="8">8</option><option value="8.5">8.5</option><option value="9">9</option>
-                              <option value="9.5">9.5</option><option value="10">10</option>
+
+                        <div className="flex min-w-0 items-center gap-0.5">
+                          {isManualReps ? (
+                            <NumericInput value={set.reps} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))} min={1} step={1} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass} />
+                          ) : (
+                            <select value={set.reps} onChange={(event) => { const value = event.target.value; if (value === '__custom__') toggleManualInput(set.id, 'reps'); else updateSetValue(exercise.id, set.id, 'reps', parseInt(value) || 0); }} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass}>
+                              {!standardRepOptions.includes(set.reps) && set.reps > 0 && <option value={set.reps}>{set.reps}</option>}
+                              {standardRepOptions.map((rep) => <option key={rep} value={rep}>{rep}</option>)}
+                              <option value="__custom__">Custom</option>
                             </select>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => toggleSetComplete(exercise.id, set.id)}
-                            className={`grid h-9 w-9 place-items-center rounded-lg transition ${set.completed ? 'bg-emerald-500 text-neutral-950' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-200'}`}
-                            aria-label={set.completed ? `Mark set ${sIdx + 1} incomplete` : `Mark set ${sIdx + 1} complete`}
-                          >
-                            <Check className="h-4 w-4 stroke-[3]" />
-                          </button>
+                          )}
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'reps')} className="grid h-7 w-4 shrink-0 place-items-center text-neutral-500 hover:text-neutral-200" aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}><Edit3 className="h-3 w-3" /></button>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <label className="min-w-0">
-                          <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">
-                            {exercise.equipment === 'Dumbbell' ? `Weight (${settings.weightUnit}/ea)` : `Weight (${settings.weightUnit})`}
-                          </span>
-                          <span className="flex min-w-0 gap-1">
-                            {isManualWeight ? (
-                              <NumericInput
-                                value={set.weight}
-                                onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)}
-                                min={0}
-                                step={exercise.equipment === 'Dumbbell' ? 1 : 2.5}
-                                aria-label={`Set ${sIdx + 1} weight`}
-                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                              />
-                            ) : (
-                              <select
-                                value={set.weight}
-                                onChange={(event) => {
-                                  const value = event.target.value;
-                                  if (value === '__custom__') toggleManualInput(set.id, 'weight');
-                                  else updateSetValue(exercise.id, set.id, 'weight', parseFloat(value) || 0);
-                                }}
-                                aria-label={`Set ${sIdx + 1} weight`}
-                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-1 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                              >
-                                {!hasCurrentWeightInOptions && set.weight > 0 && <option value={set.weight}>{set.weight} {settings.weightUnit}</option>}
-                                {weightOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                                <option value="__custom__">Custom…</option>
-                              </select>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => toggleManualInput(set.id, 'weight')}
-                              className="grid h-10 w-9 shrink-0 place-items-center rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-200"
-                              aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        </label>
+                        <select value={set.rpe || ''} onChange={(event) => updateSetValue(exercise.id, set.id, 'rpe', event.target.value ? parseFloat(event.target.value) : undefined)} aria-label={`Set ${sIdx + 1} RPE`} className="h-8 w-full min-w-0 rounded-lg border border-neutral-700/80 bg-neutral-950 px-0.5 text-center font-mono text-[11px] text-neutral-200 focus:border-emerald-500 focus:outline-none">
+                          <option value="">—</option><option value="6">6</option><option value="7">7</option><option value="7.5">7.5</option><option value="8">8</option><option value="8.5">8.5</option><option value="9">9</option><option value="9.5">9.5</option><option value="10">10</option>
+                        </select>
 
-                        <label className="min-w-0">
-                          <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">Reps</span>
-                          <span className="flex min-w-0 gap-1">
-                            {isManualReps ? (
-                              <NumericInput
-                                value={set.reps}
-                                onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))}
-                                min={1}
-                                step={1}
-                                aria-label={`Set ${sIdx + 1} reps`}
-                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                              />
-                            ) : (
-                              <select
-                                value={set.reps}
-                                onChange={(event) => {
-                                  const value = event.target.value;
-                                  if (value === '__custom__') toggleManualInput(set.id, 'reps');
-                                  else updateSetValue(exercise.id, set.id, 'reps', parseInt(value) || 0);
-                                }}
-                                aria-label={`Set ${sIdx + 1} reps`}
-                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-1 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
-                              >
-                                {!standardRepOptions.includes(set.reps) && set.reps > 0 && <option value={set.reps}>{set.reps} reps</option>}
-                                {standardRepOptions.map((rep) => <option key={rep} value={rep}>{rep}</option>)}
-                                <option value="__custom__">Custom</option>
-                              </select>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => toggleManualInput(set.id, 'reps')}
-                              className="grid h-10 w-9 shrink-0 place-items-center rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-200"
-                              aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        </label>
+                        <button type="button" onClick={() => toggleSetComplete(exercise.id, set.id)} className={`grid h-7 w-7 place-items-center rounded-lg transition ${set.completed ? 'bg-emerald-500 text-neutral-950' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-200'}`} aria-label={set.completed ? `Mark set ${sIdx + 1} incomplete` : `Mark set ${sIdx + 1} complete`}>
+                          <Check className="h-4 w-4 stroke-[3]" />
+                        </button>
                       </div>
-                    </section>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-
               {/* Add Set Footer */}
               <div className="p-3 bg-neutral-950/40 border-t border-neutral-800/60 flex items-center justify-between">
                 <button
