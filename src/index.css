@@ -64,6 +64,26 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; }
 
+.muscle-map-figures > div:first-child {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.muscle-map-figures > div:first-child > svg {
+  display: block;
+  width: min(220px, calc((100vw - 92px) / 2));
+  height: auto;
+}
+
+.muscle-map-figures.paired-view > div:first-child {
+  flex-wrap: nowrap;
+  gap: 8px !important;
+}
+
+.muscle-map-figures.single-view > div:first-child > svg {
+  width: min(260px, 70vw);
+}
+
 /* iOS Safari zooms the page when a text control uses less than 16px text. Keep
    every text-entry control at the safe size, not only workout number fields. */
 @media (max-width: 639px) {
