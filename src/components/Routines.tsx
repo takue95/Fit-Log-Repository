@@ -44,7 +44,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     { exerciseId: 'barbell-bench-press', defaultSets: 3, defaultReps: 8 }
   ]);
 
-  const categories = ['All', 'Push / Pull / Legs', 'Upper / Lower', 'Full Body', 'Custom'];
+  const categories = ['All', 'Push / Pull / Legs', 'Upper / Lower', 'Full Body', 'Specialized', 'Custom'];
 
   const filteredRoutines = routines.filter(
     (r) => selectedCategory === 'All' || r.category === selectedCategory
@@ -475,3 +475,4 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     </div>
   );
 };
+
