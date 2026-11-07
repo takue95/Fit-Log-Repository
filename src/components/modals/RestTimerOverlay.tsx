@@ -169,7 +169,7 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
       {/* Progress Bar */}
       <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-300"
           style={{ width: `${progressPercent}%` }}
         />
       </div>

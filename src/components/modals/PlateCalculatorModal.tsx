@@ -98,7 +98,7 @@ export const PlateCalculatorModal: React.FC<PlateCalculatorModalProps> = ({
           <div className="text-xs text-neutral-400">
             Per Side: <span className="font-bold text-white">{result.weightPerSide} {unit}</span>
             {result.remainder > 0 && (
-              <span className="text-amber-400 ml-2">({result.remainder} {unit} remaining)</span>
+              <span className="text-emerald-400 ml-2">({result.remainder} {unit} remaining)</span>
             )}
           </div>
 

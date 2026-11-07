@@ -50,7 +50,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-neutral-800 flex items-center justify-between bg-neutral-950/70">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
               <ArrowLeftRight className="w-4 h-4" />
             </div>
             <div>
@@ -85,7 +85,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
               <span>{currentExercise.sets.length} configured sets</span>
             </div>
           </div>
-          <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shrink-0">
+          <div className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shrink-0">
             Current
           </div>
         </div>
@@ -100,7 +100,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
               placeholder={`Search alternative ${currentExercise.category} exercises...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500/70"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/70"
             />
           </div>
 
@@ -112,7 +112,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
                 onClick={() => setFilterMode('same-category')}
                 className={`px-3 py-1 rounded-lg font-bold transition ${
                   filterMode === 'same-category'
-                    ? 'bg-amber-500 text-neutral-950'
+                    ? 'bg-emerald-500 text-neutral-950'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
@@ -123,7 +123,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
                 onClick={() => setFilterMode('all')}
                 className={`px-3 py-1 rounded-lg font-bold transition ${
                   filterMode === 'all'
-                    ? 'bg-amber-500 text-neutral-950'
+                    ? 'bg-emerald-500 text-neutral-950'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
@@ -135,7 +135,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
             <select
               value={selectedEquipment}
               onChange={(e) => setSelectedEquipment(e.target.value)}
-              className="bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-xl px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500"
+              className="bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-xl px-2.5 py-1 text-xs focus:outline-none focus:border-emerald-500"
             >
               {equipmentOptions.map((eq) => (
                 <option key={eq} value={eq}>
@@ -160,16 +160,16 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
               <div
                 key={alt.id}
                 onClick={() => onSelectSwap(alt)}
-                className="group p-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800/80 border border-neutral-800 hover:border-amber-500/50 transition cursor-pointer flex items-center justify-between shadow-sm"
+                className="group p-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800/80 border border-neutral-800 hover:border-emerald-500/50 transition cursor-pointer flex items-center justify-between shadow-sm"
               >
                 <div className="min-w-0 pr-3">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-white group-hover:text-amber-400 transition truncate">
+                    <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition truncate">
                       {alt.name}
                     </h4>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-neutral-400 mt-0.5">
-                    <span className="text-amber-400 font-medium">{alt.category}</span>
+                    <span className="text-emerald-400 font-medium">{alt.category}</span>
                     <span>•</span>
                     <span className="px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-300 font-mono text-[10px]">
                       {alt.equipment}
@@ -181,7 +181,7 @@ export const ExerciseSwapModal: React.FC<ExerciseSwapModalProps> = ({
 
                 <button
                   type="button"
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1 shrink-0 shadow-sm transition"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs flex items-center gap-1 shrink-0 shadow-sm transition"
                 >
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                   Swap

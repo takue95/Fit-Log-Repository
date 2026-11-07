@@ -62,7 +62,7 @@ const HEAT_LEVEL_METRICS = {
     fillGrad: 'url(#gradHeat1)',
     stroke: '#14b8a6',
     glowColor: 'rgba(20, 184, 166, 0.6)',
-    badgeBg: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
+    badgeBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
     indicatorColor: '#14b8a6'
   },
   2: {
@@ -72,7 +72,7 @@ const HEAT_LEVEL_METRICS = {
     fillGrad: 'url(#gradHeat2)',
     stroke: '#3b82f6',
     glowColor: 'rgba(59, 130, 246, 0.65)',
-    badgeBg: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+    badgeBg: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
     indicatorColor: '#3b82f6'
   },
   3: {
@@ -80,10 +80,10 @@ const HEAT_LEVEL_METRICS = {
     shortLabel: 'Optimal',
     setsRange: '9-13 sets',
     fillGrad: 'url(#gradHeat3)',
-    stroke: '#f59e0b',
+    stroke: '#78b48f',
     glowColor: 'rgba(245, 158, 11, 0.75)',
-    badgeBg: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-    indicatorColor: '#f59e0b'
+    badgeBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    indicatorColor: '#78b48f'
   },
   4: {
     label: 'Overdrive / High Heat (14+ sets)',
@@ -92,7 +92,7 @@ const HEAT_LEVEL_METRICS = {
     fillGrad: 'url(#gradHeat4)',
     stroke: '#f43f5e',
     glowColor: 'rgba(244, 63, 94, 0.85)',
-    badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+    badgeBg: 'bg-red-500/20 text-red-300 border-red-500/40',
     indicatorColor: '#f43f5e'
   }
 };
@@ -272,9 +272,9 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/20">
-            <div className="w-full h-full bg-neutral-950 rounded-[10px] flex items-center justify-center text-cyan-400">
-              <Flame className="w-4 h-4 fill-cyan-400" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-neutral-500 via-neutral-600 to-neutral-600 p-0.5 shadow-lg shadow-neutral-500/20">
+            <div className="w-full h-full bg-neutral-950 rounded-[10px] flex items-center justify-center text-neutral-400">
+              <Flame className="w-4 h-4 fill-neutral-400" />
             </div>
           </div>
           <div>
@@ -282,7 +282,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
                 Muscle Engagement Heat Map
               </h3>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-neutral-500/15 text-neutral-300 border border-neutral-500/30 px-2 py-0.5 rounded-full">
                 Interactive Biometrics
               </span>
             </div>
@@ -300,7 +300,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               onClick={() => setViewOrientation('both')}
               className={`px-3 py-1 rounded-lg font-semibold transition ${
                 viewOrientation === 'both'
-                  ? 'bg-neutral-800 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  ? 'bg-neutral-800 text-neutral-400 border border-neutral-500/40 shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -310,7 +310,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               onClick={() => setViewOrientation('front')}
               className={`px-3 py-1 rounded-lg font-semibold transition ${
                 viewOrientation === 'front'
-                  ? 'bg-neutral-800 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  ? 'bg-neutral-800 text-neutral-400 border border-neutral-500/40 shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -320,7 +320,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               onClick={() => setViewOrientation('back')}
               className={`px-3 py-1 rounded-lg font-semibold transition ${
                 viewOrientation === 'back'
-                  ? 'bg-neutral-800 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  ? 'bg-neutral-800 text-neutral-400 border border-neutral-500/40 shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -358,10 +358,10 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="bg-neutral-950/80 border border-neutral-800 p-3 rounded-2xl flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
-            <Activity className="w-3 h-3 text-cyan-400" />
+            <Activity className="w-3 h-3 text-neutral-400" />
             Body Coverage
           </span>
-          <span className="text-lg sm:text-xl font-extrabold font-mono text-cyan-400 tabular-nums">
+          <span className="text-lg sm:text-xl font-extrabold font-mono text-neutral-400 tabular-nums">
             {coveragePercent}%
           </span>
           <span className="text-[10px] text-neutral-400">
@@ -371,13 +371,13 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
 
         <div className="bg-neutral-950/80 border border-neutral-800 p-3 rounded-2xl flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
-            <Flame className="w-3 h-3 text-amber-400" />
+            <Flame className="w-3 h-3 text-emerald-400" />
             Highest Heat
           </span>
           <span className="text-lg sm:text-xl font-extrabold font-mono text-white truncate">
             {topMuscle.displayName.split(' ')[0]}
           </span>
-          <span className="text-[10px] text-amber-400 font-medium tabular-nums">
+          <span className="text-[10px] text-emerald-400 font-medium tabular-nums">
             {topMuscle.setsCount} sets · {(topMuscle.totalVolume / 1000).toFixed(1)}k {settings.weightUnit}
           </span>
         </div>
@@ -404,7 +404,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
           {/* Interactive Live HUD Banner */}
           <div className="relative z-10 flex items-center justify-between px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-800/80 backdrop-blur-md">
             <div className="flex items-center gap-2">
-              <Crosshair className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <Crosshair className="w-4 h-4 text-neutral-400 animate-pulse" />
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="font-bold text-white">
                   {activeFocusMuscle.displayName}
@@ -414,7 +414,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                   {activeFocusMuscle.setsCount} completed sets
                 </span>
                 <span className="text-neutral-500">·</span>
-                <span className="font-mono text-cyan-300 font-semibold tabular-nums">
+                <span className="font-mono text-neutral-300 font-semibold tabular-nums">
                   {activeFocusMuscle.totalVolume.toLocaleString()} {settings.weightUnit}
                 </span>
               </div>
@@ -934,7 +934,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-neutral-900/90 p-2.5 rounded-xl border border-neutral-800">
                 <span className="text-[10px] uppercase font-bold text-neutral-400 block">Sets Completed</span>
-                <span className="text-lg font-extrabold font-mono text-cyan-400 tabular-nums">
+                <span className="text-lg font-extrabold font-mono text-neutral-400 tabular-nums">
                   {selectedStats.setsCount} <span className="text-xs font-normal text-neutral-400">/ 12 target</span>
                 </span>
               </div>
@@ -955,7 +955,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                   {selectedStats.recoveryStatus === 'Ready' || selectedStats.recoveryStatus === 'Rested' ? (
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    <AlertCircle className="w-4 h-4 text-emerald-400" />
                   )}
                   Recovery Status: <span className="font-bold text-white">{selectedStats.recoveryStatus}</span>
                 </span>
@@ -965,7 +965,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               </div>
               <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-300"
                   style={{ width: `${selectedStats.recoveryPercent}%` }}
                 />
               </div>
@@ -996,7 +996,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                         <span className="font-bold text-white truncate block">{ex.name}</span>
                         <span className="text-[10px] text-neutral-400 tabular-nums">{ex.sets} completed sets</span>
                       </div>
-                      <span className="font-mono font-bold text-cyan-400 text-[11px] shrink-0 tabular-nums">
+                      <span className="font-mono font-bold text-neutral-400 text-[11px] shrink-0 tabular-nums">
                         {ex.volume.toLocaleString()} {settings.weightUnit}
                       </span>
                     </div>
@@ -1012,7 +1012,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       <div className="flex flex-col gap-3 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <Layers className="w-3.5 h-3.5 text-neutral-400" />
             Full Muscle Group Engagement Matrix
           </h4>
 
@@ -1024,7 +1024,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                 onClick={() => setActiveSplitFilter(split)}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition whitespace-nowrap ${
                   activeSplitFilter === split
-                    ? 'bg-neutral-800 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                    ? 'bg-neutral-800 text-neutral-400 border border-neutral-500/40 shadow-sm'
                     : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
                 }`}
               >
@@ -1049,9 +1049,9 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                 onMouseLeave={() => setHoveredMuscle(null)}
                 className={`p-3 rounded-2xl border transition cursor-pointer flex flex-col justify-between gap-2 group ${
                   isSelected
-                    ? 'bg-neutral-900 border-cyan-500 shadow-md shadow-cyan-500/10'
+                    ? 'bg-neutral-900 border-neutral-500 shadow-md shadow-neutral-500/10'
                     : isHovered
-                    ? 'bg-neutral-900/90 border-cyan-500/50'
+                    ? 'bg-neutral-900/90 border-neutral-500/50'
                     : 'bg-neutral-950/80 border-neutral-800/80 hover:border-neutral-700 hover:bg-neutral-900/60'
                 }`}
               >
@@ -1066,14 +1066,14 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                       title={metric.label}
                     />
                   </div>
-                  <h5 className="text-xs font-bold text-white group-hover:text-cyan-400 transition truncate">
+                  <h5 className="text-xs font-bold text-white group-hover:text-neutral-400 transition truncate">
                     {muscle.key}
                   </h5>
                 </div>
 
                 <div>
                   <div className="flex items-baseline justify-between font-mono">
-                    <span className="text-sm font-extrabold text-cyan-400 tabular-nums">
+                    <span className="text-sm font-extrabold text-neutral-400 tabular-nums">
                       {muscle.setsCount}{' '}
                       <span className="text-[10px] font-normal text-neutral-400">sets</span>
                     </span>

@@ -14,9 +14,6 @@ import {
   VolumeX, 
   Download, 
   Upload, 
-  RotateCcw, 
-  Layers,
-  Sparkles,
   Search,
   CheckCircle2,
   ExternalLink,
@@ -32,8 +29,6 @@ interface HistoryAndSettingsProps {
   onDeleteHistoryItem: (workoutId: string) => void;
   onExportData: () => void;
   onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onResetDemoData: () => void;
-  onOpenStitchModal: () => void;
 }
 
 export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
@@ -43,9 +38,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   onUpdateSettings,
   onDeleteHistoryItem,
   onExportData,
-  onImportData,
-  onResetDemoData,
-  onOpenStitchModal
+  onImportData
 }) => {
   const [activeTab, setActiveTab] = useState<'history' | 'exercises' | 'settings'>('history');
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(history[0]?.id || null);
@@ -66,17 +59,10 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
       {/* Top Navigation Tabs */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Log & Preferences</h2>
-          <p className="text-xs text-neutral-400">Workout archives, exercise encyclopedia, and units</p>
+          <h2 className="text-xl font-extrabold text-white tracking-tight">History & Settings</h2>
+          <p className="text-xs text-neutral-400">Your training record, exercise guide, and preferences</p>
         </div>
 
-        <button
-          onClick={onOpenStitchModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold transition"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          Stitch Slots
-        </button>
       </div>
 
       <div className="flex bg-neutral-900 p-1 rounded-2xl border border-neutral-800">
@@ -171,7 +157,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
                     <div className="flex items-center gap-2 shrink-0">
                       {workout.prsAchieved.length > 0 && (
-                        <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold">
+                        <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold">
                           <Trophy className="w-3.5 h-3.5" />
                           <span>+{workout.prsAchieved.length} PR</span>
                         </div>
@@ -187,8 +173,8 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                     <div className="p-4 sm:p-5 bg-neutral-950/60 border-t border-neutral-800 space-y-4 animate-in fade-in">
                       {/* PR tags */}
                       {workout.prsAchieved.length > 0 && (
-                        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col gap-1.5">
-                          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col gap-1.5">
+                          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                             <Trophy className="w-3.5 h-3.5" />
                             Milestones Achieved
                           </span>
@@ -363,7 +349,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
                 {selectedExerciseForModal.tips && (
                   <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-300">
-                    <span className="font-bold text-amber-400">Pro Cue: </span>
+                    <span className="font-bold text-emerald-400">Pro Cue: </span>
                     {selectedExerciseForModal.tips}
                   </div>
                 )}
@@ -579,8 +565,8 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                 Export JSON
               </button>
 
-              <label className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-950 border border-neutral-700 hover:border-cyan-500/50 text-white font-bold text-xs transition cursor-pointer">
-                <Upload className="w-4 h-4 text-cyan-400" />
+              <label className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-950 border border-neutral-700 hover:border-neutral-500/50 text-white font-bold text-xs transition cursor-pointer">
+                <Upload className="w-4 h-4 text-neutral-400" />
                 Import JSON
                 <input
                   type="file"
@@ -592,25 +578,6 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
             </div>
           </div>
 
-          {/* Reset Demo Data */}
-          <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-neutral-300">Reset Demo Data</h4>
-              <p className="text-xs text-neutral-500">Restore factory sample workouts and routines</p>
-            </div>
-
-            <button
-              onClick={() => {
-                if (window.confirm('Reset all workouts and return to demo state?')) {
-                  onResetDemoData();
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-700 hover:text-amber-400 text-neutral-400 text-xs font-semibold transition"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-          </div>
         </div>
       )}
     </div>

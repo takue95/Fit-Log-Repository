@@ -306,7 +306,7 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
 
                 {viewingDetails.tips && (
                   <div className="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-300">
-                    <span className="font-bold text-amber-400">Coach Cue: </span>
+                    <span className="font-bold text-emerald-400">Coach Cue: </span>
                     {viewingDetails.tips}
                   </div>
                 )}

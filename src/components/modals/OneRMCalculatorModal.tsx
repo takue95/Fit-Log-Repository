@@ -35,7 +35,7 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <div className="w-10 h-10 rounded-xl bg-neutral-500/10 border border-neutral-500/20 flex items-center justify-center text-neutral-400">
               <Calculator className="w-5 h-5" />
             </div>
             <div>
@@ -61,7 +61,7 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
               type="number"
               value={weight || ''}
               onChange={(e) => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-white focus:outline-none focus:border-cyan-500 font-mono"
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-white focus:outline-none focus:border-neutral-500 font-mono"
             />
           </div>
 
@@ -76,16 +76,16 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
                 max="30"
                 value={reps || ''}
                 onChange={(e) => setReps(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-cyan-400 focus:outline-none focus:border-cyan-500 font-mono"
+                className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-neutral-400 focus:outline-none focus:border-neutral-500 font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* Estimated 1RM Banner */}
-        <div className="bg-gradient-to-r from-cyan-950/60 to-emerald-950/60 border border-cyan-500/30 rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-neutral-950/60 to-emerald-950/60 border border-neutral-500/30 rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs uppercase font-bold text-cyan-400 tracking-wider">Estimated 1RM</span>
+            <span className="text-xs uppercase font-bold text-neutral-400 tracking-wider">Estimated 1RM</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-3xl font-extrabold text-white font-mono">{avg1RM}</span>
               <span className="text-sm font-semibold text-neutral-400">{unit}</span>
@@ -95,7 +95,7 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
             </p>
           </div>
 
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
+          <div className="w-12 h-12 rounded-xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-300">
             <Zap className="w-6 h-6" />
           </div>
         </div>
@@ -112,7 +112,7 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
               return (
                 <div key={p.pct} className="flex items-center justify-between px-3.5 py-2 hover:bg-neutral-900 transition">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-cyan-400 w-9">{p.pct}%</span>
+                    <span className="font-mono font-bold text-neutral-400 w-9">{p.pct}%</span>
                     <span className="text-neutral-300">{p.label}</span>
                   </div>
                   <div className="flex items-center gap-3">

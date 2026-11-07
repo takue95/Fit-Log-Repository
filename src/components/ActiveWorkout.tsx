@@ -401,7 +401,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 hover:bg-neutral-800 transition"
           >
             {isTimerRunning ? (
-              <Pause className="w-3.5 h-3.5 text-amber-400" />
+              <Pause className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
               <Play className="w-3.5 h-3.5 text-emerald-400 fill-current" />
             )}
@@ -505,7 +505,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                   <button
                     type="button"
                     onClick={() => setExerciseToSwap(exercise)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-amber-400 hover:text-amber-300 text-xs font-semibold transition border border-neutral-700/60"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition border border-neutral-700/60"
                     title="Swap exercise for another in the same movement line"
                   >
                     <ArrowLeftRight className="w-3.5 h-3.5" />
@@ -532,7 +532,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
                     title="Start Rest Timer"
                   >
-                    <Timer className="w-3.5 h-3.5 text-cyan-400" />
+                    <Timer className="w-3.5 h-3.5 text-neutral-400" />
                   </button>
 
                   <button
@@ -551,11 +551,11 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
               {/* Starting Weight Estimator Banner for New Exercises */}
               {isNewExercise && (
-                <div className="px-4 py-2.5 bg-gradient-to-r from-cyan-950/40 via-neutral-900 to-cyan-950/20 border-b border-cyan-800/30 flex items-center justify-between text-xs">
+                <div className="px-4 py-2.5 bg-gradient-to-r from-neutral-950/40 via-neutral-900 to-neutral-950/20 border-b border-neutral-800/30 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <Sparkles className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                     <span className="text-neutral-300 text-[11px] truncate">
-                      <strong className="text-cyan-300 font-semibold">New Exercise:</strong> Est. starting weight is{' '}
+                      <strong className="text-neutral-300 font-semibold">New Exercise:</strong> Est. starting weight is{' '}
                       <span className="font-mono font-bold text-white">
                         {estStartingWeight} {settings.weightUnit}
                       </span>{' '}
@@ -565,7 +565,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                   <button
                     type="button"
                     onClick={() => handleApplyStartingWeight(exercise.id, estStartingWeight)}
-                    className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] shrink-0 transition"
+                    className="px-2.5 py-1 rounded-lg bg-neutral-500/20 hover:bg-neutral-500/30 text-neutral-300 border border-neutral-500/40 font-bold text-[11px] shrink-0 transition"
                   >
                     Apply Est.
                   </button>
@@ -583,8 +583,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                           adaptiveHint.badge === 'Overload'
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                             : adaptiveHint.badge === 'Back-off'
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                            : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                            : 'bg-neutral-500/20 text-neutral-400 border border-neutral-500/40'
                         }`}>
                           {adaptiveHint.badge}
                         </span>
@@ -639,7 +639,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                         setExerciseToSwap(exercise);
                         setActiveMenuExerciseId(null);
                       }}
-                      className="flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold"
+                      className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
                     >
                       <ArrowLeftRight className="w-3.5 h-3.5" />
                       Swap Movement
@@ -710,9 +710,9 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                               }}
                               className={`w-6 h-6 rounded-md font-mono font-bold text-[11px] inline-flex items-center justify-center transition ${
                                 isWarmup
-                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                                   : isDrop
-                                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                                  ? 'bg-neutral-500/20 text-neutral-400 border border-neutral-500/40'
                                   : 'bg-neutral-800 text-neutral-300'
                               }`}
                               title="Tap to toggle set type (Warmup / Drop / Normal)"

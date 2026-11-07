@@ -133,11 +133,11 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
   // Muscle Split Distribution
   const muscleDistribution = [
-    { group: 'Back & Lats', pct: 28, color: 'bg-emerald-500' },
-    { group: 'Chest', pct: 24, color: 'bg-teal-400' },
-    { group: 'Quads & Glutes', pct: 22, color: 'bg-cyan-400' },
-    { group: 'Shoulders', pct: 14, color: 'bg-amber-400' },
-    { group: 'Arms & Core', pct: 12, color: 'bg-purple-400' }
+    { group: 'Back & Lats', pct: 28, color: 'bg-emerald-700' },
+    { group: 'Chest', pct: 24, color: 'bg-emerald-500' },
+    { group: 'Quads & Glutes', pct: 22, color: 'bg-emerald-300' },
+    { group: 'Shoulders', pct: 14, color: 'bg-emerald-900' },
+    { group: 'Arms & Core', pct: 12, color: 'bg-neutral-500' }
   ];
 
   // PR Records
@@ -172,7 +172,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
         <button
           onClick={onOpenOneRMCalc}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-cyan-500/50 text-cyan-400 text-xs font-bold transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-neutral-500/50 text-neutral-400 text-xs font-bold transition"
         >
           <TrendingUp className="w-3.5 h-3.5" />
           1RM Calc
@@ -218,8 +218,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           >
             <defs>
               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#71b593" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#71b593" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -253,7 +253,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             {/* Polyline */}
             <polyline
               fill="none"
-              stroke="#10b981"
+              stroke="#71b593"
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -280,7 +280,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                     cx={x}
                     cy={y}
                     r={isLast ? 5 : 4}
-                    fill={isLast ? '#34d399' : '#10b981'}
+                    fill={isLast ? '#9cceb0' : '#71b593'}
                     stroke="#0a0a0a"
                     strokeWidth="2"
                   />
@@ -332,10 +332,10 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
       <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-xl flex flex-col gap-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
+            <Trophy className="w-5 h-5 text-emerald-400" />
             <h3 className="text-base font-bold text-white">Personal Records Wall</h3>
           </div>
-          <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
+          <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
             All-Time Bests
           </span>
         </div>
@@ -343,7 +343,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {allPRs.map((pr, idx) => {
             const medalColor =
-              idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : 'text-amber-600';
+              idx === 0 ? 'text-emerald-400' : idx === 1 ? 'text-slate-300' : 'text-emerald-600';
 
             return (
               <div
@@ -382,7 +382,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl flex flex-col justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <BarChart3 className="w-4 h-4 text-neutral-400" />
               Weekly Volume Tonnage ({settings.weightUnit})
             </div>
             <h4 className="text-base font-bold text-white mt-1">Consistency Trend</h4>
@@ -402,7 +402,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                     <div
                       className={`w-full rounded-t-md transition-all duration-500 ${
                         isCurrent
-                          ? 'bg-gradient-to-t from-emerald-500 to-teal-400'
+                          ? 'bg-gradient-to-t from-emerald-500 to-emerald-400'
                           : 'bg-neutral-700 hover:bg-neutral-600'
                       }`}
                       style={{ height: `${heightPct}%` }}
@@ -458,7 +458,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
       <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-xl flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
               <Scale className="w-4 h-4" />
             </div>
             <div>

@@ -1,18 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Home, 
-  Dumbbell, 
-  PlusCircle, 
-  TrendingUp, 
-  History, 
-  Layers, 
-  Smartphone, 
-  Maximize2, 
-  Minimize2,
-  Sparkles,
-  Trophy,
-  Activity
-} from 'lucide-react';
+import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity } from 'lucide-react';
 import { 
   RoutineTemplate, 
   CompletedWorkout, 
@@ -35,7 +22,6 @@ import { ExercisePickerModal } from './components/modals/ExercisePickerModal';
 import { RestTimerOverlay } from './components/modals/RestTimerOverlay';
 import { WorkoutCompletedModal } from './components/modals/WorkoutCompletedModal';
 import { OneRMCalculatorModal } from './components/modals/OneRMCalculatorModal';
-import { StitchScreenModal } from './components/modals/StitchScreenModal';
 import { calculate1RM } from './utils/fitnessCalc';
 
 const STORAGE_KEYS = {
@@ -44,18 +30,12 @@ const STORAGE_KEYS = {
   HISTORY: 'fitlog_history_v1',
   BODY_WEIGHTS: 'fitlog_body_weights_v1',
   ACTIVE_WORKOUT: 'fitlog_active_workout_v1',
-  SETTINGS: 'fitlog_settings_v1',
-  VIEWPORT_MODE: 'fitlog_viewport_mode_v1'
+  SETTINGS: 'fitlog_settings_v1'
 };
 
 export default function App() {
   // Navigation: 0 = Dashboard, 1 = Routines, 2 = Active Workout, 3 = Analytics, 4 = History & Settings
   const [currentScreen, setCurrentScreen] = useState<number>(0);
-
-  // Viewport mode: 'mobile' or 'desktop'
-  const [viewportMode, setViewportMode] = useState<'mobile' | 'desktop'>(() => {
-    return (localStorage.getItem(STORAGE_KEYS.VIEWPORT_MODE) as 'mobile' | 'desktop') || 'mobile';
-  });
 
   // Persistent States
   const [exercises, setExercises] = useState<Exercise[]>(() => {
@@ -129,7 +109,6 @@ export default function App() {
   const [plateCalcInitialWeight, setPlateCalcInitialWeight] = useState(135);
   const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false);
   const [isOneRMCalcOpen, setIsOneRMCalcOpen] = useState(false);
-  const [isStitchModalOpen, setIsStitchModalOpen] = useState(false);
   const [completedWorkoutSummary, setCompletedWorkoutSummary] = useState<CompletedWorkout | null>(null);
 
   // Sync to local storage
@@ -160,10 +139,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.VIEWPORT_MODE, viewportMode);
-  }, [viewportMode]);
 
   // Workout Creation Handlers
   const handleStartEmptyWorkout = () => {
@@ -412,98 +387,42 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  const handleResetDemoData = () => {
-    setExercises(INITIAL_EXERCISES);
-    setRoutines(DEFAULT_ROUTINES);
-    setHistory(INITIAL_WORKOUT_HISTORY);
-    setBodyWeights(INITIAL_BODY_MEASUREMENTS);
-    setActiveWorkout(null);
-    setActiveRestTimer(null);
-    setCurrentScreen(0);
-  };
-
   // Navigation Items
   const navItems = [
-    { screen: 0, label: 'Home', icon: Home, stitchSlot: '#1 (f0110573...)' },
-    { screen: 1, label: 'Routines', icon: Dumbbell, stitchSlot: '#3 (13c7243c...)' },
+    { screen: 0, label: 'Home', icon: Home },
+    { screen: 1, label: 'Routines', icon: Dumbbell },
     { 
       screen: 2, 
-      label: activeWorkout ? 'Active' : 'Log', 
+      label: activeWorkout ? 'Active' : 'Start', 
       icon: PlusCircle, 
       isCenter: true,
-      hasPulse: !!activeWorkout,
-      stitchSlot: '#2 (233b3f48...)' 
+      hasPulse: !!activeWorkout
     },
-    { screen: 3, label: 'Analytics', icon: TrendingUp, stitchSlot: '#4 (f6ff3f3b...)' },
-    { screen: 4, label: 'Log & Set', icon: History, stitchSlot: '#5 (33d5261e...)' }
+    { screen: 3, label: 'Progress', icon: TrendingUp },
+    { screen: 4, label: 'History', icon: History }
   ];
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-neutral-100 flex flex-col items-center justify-start">
-      {/* Top Application Bar */}
-      <header className="w-full max-w-5xl px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/70 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
+    <div className="min-h-screen bg-[#0d100e] text-neutral-100 flex flex-col items-center justify-start pb-24">
+      <header className="w-full max-w-[430px] px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20">
-            <div className="w-full h-full bg-neutral-950 rounded-[10px] flex items-center justify-center text-emerald-400">
+          <div className="w-8 h-8 rounded-xl bg-emerald-900/50 border border-emerald-800/70 flex items-center justify-center text-emerald-300">
               <Activity className="w-4 h-4" />
-            </div>
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-extrabold tracking-tight text-white">FitLog</h1>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                PRO
-              </span>
-            </div>
-            <p className="text-[10px] text-neutral-400">Workout Tracker</p>
+            <h1 className="text-sm font-extrabold tracking-tight text-white">FitLog</h1>
+            <p className="text-[9px] text-neutral-400">Training log</p>
           </div>
-        </div>
-
-        {/* Viewport switch and Stitch Info */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsStitchModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold transition"
-            title="Inspect 5 Stitch Screens"
-          >
-            <Layers className="w-3.5 h-3.5 text-purple-400" />
-            <span className="hidden sm:inline">Stitch 5 Screens</span>
-          </button>
-
-          <button
-            onClick={() => setViewportMode(viewportMode === 'mobile' ? 'desktop' : 'mobile')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition"
-            title={viewportMode === 'mobile' ? 'Expand to Desktop View' : 'Switch to Mobile Frame'}
-          >
-            {viewportMode === 'mobile' ? (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">Expanded</span>
-              </>
-            ) : (
-              <>
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Mobile Frame</span>
-              </>
-            )}
-          </button>
         </div>
       </header>
 
-      {/* Main Body Shell */}
-      <main className={`w-full flex-1 flex flex-col items-center justify-start p-3 sm:p-5 ${
-        viewportMode === 'mobile' ? 'max-w-[430px]' : 'max-w-4xl'
-      }`}>
-        <div className={`w-full bg-neutral-950/80 rounded-3xl ${
-          viewportMode === 'mobile'
-            ? 'border border-neutral-800/90 shadow-2xl p-4 sm:p-5'
-            : 'border border-neutral-800/60 p-5 sm:p-6 shadow-xl'
-        }`}>
+      <main className="w-full max-w-[430px] flex-1 px-4 pt-4 pb-5">
           {/* Screen 1: Dashboard */}
           {currentScreen === 0 && (
             <Dashboard
               routines={routines}
               history={history}
+              bodyWeights={bodyWeights}
               activeWorkout={activeWorkout}
               settings={settings}
               onStartEmptyWorkout={handleStartEmptyWorkout}
@@ -512,12 +431,12 @@ export default function App() {
               onNavigateToRoutines={() => setCurrentScreen(1)}
               onNavigateToAnalytics={() => setCurrentScreen(3)}
               onNavigateToHistory={() => setCurrentScreen(4)}
+              onAddBodyWeight={handleAddBodyWeight}
               onOpenPlateCalc={() => {
                 setPlateCalcInitialWeight(settings.weightUnit === 'lbs' ? 135 : 60);
                 setIsPlateCalcOpen(true);
               }}
               onOpenOneRMCalc={() => setIsOneRMCalcOpen(true)}
-              onOpenStitchModal={() => setIsStitchModalOpen(true)}
             />
           )}
 
@@ -603,11 +522,8 @@ export default function App() {
               onDeleteHistoryItem={handleDeleteHistoryItem}
               onExportData={handleExportData}
               onImportData={handleImportData}
-              onResetDemoData={handleResetDemoData}
-              onOpenStitchModal={() => setIsStitchModalOpen(true)}
             />
           )}
-        </div>
       </main>
 
       {/* Floating Rest Timer Pill (if timer running) */}
@@ -622,10 +538,8 @@ export default function App() {
       )}
 
       {/* Bottom Navigation Dock */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-neutral-950/90 backdrop-blur-lg border-t border-neutral-800/80 px-4 py-2 flex justify-center">
-        <div className={`w-full flex items-center justify-around ${
-          viewportMode === 'mobile' ? 'max-w-[430px]' : 'max-w-md'
-        }`}>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-800/80 bg-neutral-950/95 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-lg flex justify-center">
+        <div className="w-full max-w-[430px] flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentScreen === item.screen;
@@ -642,12 +556,12 @@ export default function App() {
                     }
                   }}
                   className="relative -top-5 flex flex-col items-center group focus:outline-none"
-                  title={item.stitchSlot}
+                  aria-label={item.label}
                 >
                   <div
                     className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition transform active:scale-95 ${
                       activeWorkout
-                        ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-neutral-950 shadow-emerald-500/30'
+                        ? 'bg-gradient-to-tr from-emerald-500 to-emerald-400 text-neutral-950 shadow-emerald-500/30'
                         : 'bg-emerald-500 hover:bg-emerald-400 text-neutral-950 shadow-emerald-500/20'
                     }`}
                   >
@@ -672,7 +586,7 @@ export default function App() {
                     ? 'text-emerald-400 font-bold'
                     : 'text-neutral-400 hover:text-neutral-200'
                 }`}
-                title={item.stitchSlot}
+                aria-label={item.label}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
                 <span className="text-[10px] font-medium tracking-tight">
@@ -712,22 +626,6 @@ export default function App() {
         <OneRMCalculatorModal
           unit={settings.weightUnit}
           onClose={() => setIsOneRMCalcOpen(false)}
-        />
-      )}
-
-      {isStitchModalOpen && (
-        <StitchScreenModal
-          onClose={() => setIsStitchModalOpen(false)}
-          onNavigateScreen={(screenIdx) => {
-            // Map Stitch slots to our tabs:
-            // 0 -> Dashboard (0)
-            // 1 -> Active Workout (2)
-            // 2 -> Routines (1)
-            // 3 -> Analytics (3)
-            // 4 -> History & Settings (4)
-            const mapping = [0, 2, 1, 3, 4];
-            setCurrentScreen(mapping[screenIdx] ?? 0);
-          }}
         />
       )}
 

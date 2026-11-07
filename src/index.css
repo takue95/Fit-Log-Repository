@@ -1,48 +1,65 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-  }
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
+  --color-neutral-950: #0d100e;
+  --color-neutral-900: #151a17;
+  --color-neutral-800: #202622;
+  --color-neutral-700: #303932;
+  --color-neutral-600: #465148;
+  --color-neutral-500: #6d7a71;
+  --color-neutral-400: #9ba69e;
+  --color-neutral-300: #c5cec8;
+  --color-neutral-200: #dfe5e1;
+  --color-neutral-100: #f2f5f2;
+
+  --color-emerald-950: #102016;
+  --color-emerald-900: #183022;
+  --color-emerald-800: #21402f;
+  --color-emerald-700: #326646;
+  --color-emerald-600: #47805d;
+  --color-emerald-500: #629d79;
+  --color-emerald-400: #78b48f;
+  --color-emerald-300: #a4ccb2;
+  --color-emerald-200: #c3dfce;
+  --color-emerald-100: #def0e4;
+}
+
+:root {
+  color-scheme: dark;
+  --fitlog-accent: #78b48f;
+  --fitlog-surface: #151a17;
+  --fitlog-border: #29312c;
+}
+
+@layer base {
   body {
     font-family: var(--font-sans);
-    background-color: #090a0f;
-    color: #f3f4f6;
+    background: #0d100e;
+    color: #f2f5f2;
     min-height: 100vh;
     min-height: 100dvh;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  button, input, select, textarea {
+    font: inherit;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-@supports (padding: env(safe-area-inset-bottom)) {
-  body { padding-bottom: env(safe-area-inset-bottom); }
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
 
-/* Custom subtle scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Hide spin buttons on numeric inputs */
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-}
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
