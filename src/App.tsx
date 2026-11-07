@@ -64,14 +64,13 @@ export default function App() {
     if (!saved) return DEFAULT_ROUTINES;
     try {
       const parsed: RoutineTemplate[] = JSON.parse(saved);
-      const hasLower = parsed.some(
-        (r) => r.id === 'lower-strength' || (r.category === 'Upper / Lower' && r.title.toLowerCase().includes('lower'))
+      if (!Array.isArray(parsed)) return DEFAULT_ROUTINES;
+      const existingIds = new Set(parsed.map((routine) => routine.id));
+      const routinesToAdd = DEFAULT_ROUTINES.filter((routine) =>
+        ['lower-strength', 'jefit-3-day-volume-chest-back', 'jefit-3-day-volume-legs', 'jefit-3-day-volume-shoulders-arms'].includes(routine.id)
+        && !existingIds.has(routine.id)
       );
-      if (!hasLower) {
-        const lowerRoutine = DEFAULT_ROUTINES.find((r) => r.id === 'lower-strength');
-        if (lowerRoutine) return [...parsed, lowerRoutine];
-      }
-      return parsed;
+      return [...parsed, ...routinesToAdd];
     } catch {
       return DEFAULT_ROUTINES;
     }
