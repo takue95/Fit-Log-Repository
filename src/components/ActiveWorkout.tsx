@@ -703,7 +703,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                               <option value="__custom__">Custom</option>
                             </select>
                           )}
-                          <button type="button" onClick={() => toggleManualInput(set.id, 'weight')} className="absolute inset-y-0 right-0 grid w-3 place-items-center bg-neutral-950 text-neutral-500 hover:text-neutral-200" aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}><Edit3 className="h-2.5 w-2.5" /></button>
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'weight')} aria-pressed={isManualWeight} className={`absolute inset-y-0 right-0 grid w-3 place-items-center ${isManualWeight ? 'bg-emerald-950/70 text-emerald-300' : 'bg-neutral-950 text-neutral-500 hover:text-neutral-200'}`} aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}><Edit3 className="h-2.5 w-2.5" /></button>
                         </div>
 
                         <div className="relative h-7 w-[3.75rem] min-w-0 max-w-full justify-self-center overflow-hidden rounded-lg border border-neutral-700/80 bg-neutral-950 focus-within:border-emerald-500">
@@ -716,7 +716,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                               <option value="__custom__">Custom</option>
                             </select>
                           )}
-                          <button type="button" onClick={() => toggleManualInput(set.id, 'reps')} className="absolute inset-y-0 right-0 grid w-3 place-items-center bg-neutral-950 text-neutral-500 hover:text-neutral-200" aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}><Edit3 className="h-2.5 w-2.5" /></button>
+                          <button type="button" onClick={() => toggleManualInput(set.id, 'reps')} aria-pressed={isManualReps} className={`absolute inset-y-0 right-0 grid w-3 place-items-center ${isManualReps ? 'bg-emerald-950/70 text-emerald-300' : 'bg-neutral-950 text-neutral-500 hover:text-neutral-200'}`} aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}><Edit3 className="h-2.5 w-2.5" /></button>
                         </div>
 
                         <div className="relative h-7 w-[3.75rem] min-w-0 max-w-full justify-self-center overflow-hidden rounded-lg border border-neutral-700/80 bg-neutral-950 focus-within:border-emerald-500">
