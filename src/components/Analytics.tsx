@@ -35,6 +35,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 }) => {
   const [selectedPRCompound, setSelectedPRCompound] = useState<string>('barbell-bench-press');
   const [progressionRange, setProgressionRange] = useState<'3M' | '6M' | '12M' | 'All'>('6M');
+  const [selectedProgressPoint, setSelectedProgressPoint] = useState<string | null>(null);
   const [newBwValue, setNewBwValue] = useState<string>('');
   const [isAddingBw, setIsAddingBw] = useState<boolean>(false);
 
@@ -135,6 +136,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   const growthPercent = progressionData.length > 1
     ? ((progressionData[progressionData.length - 1].estimated1RM - progressionData[0].estimated1RM) / progressionData[0].estimated1RM) * 100
     : null;
+  const activeProgressPoint = progressionData.find((point) => point.dateISO === selectedProgressPoint)
+    ?? progressionData[progressionData.length - 1];
 
   // SVG Chart Dimensions
   const chartHeight = 160;
@@ -344,16 +347,29 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
             {progressionData.map((point, index) => {
               const isLast = index === progressionData.length - 1;
+              const isSelected = point.dateISO === activeProgressPoint?.dateISO;
+              const pointLabel = `${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM from ${point.maxWeight} ${settings.weightUnit} × ${point.reps} reps`;
               return (
                 <g key={point.dateISO}>
                   <circle
                     cx={dateToX(point.dateISO)}
                     cy={dateToY(point.estimated1RM)}
-                    r={isLast ? 5 : 3.5}
-                    fill={isLast ? '#9cceb0' : '#71b593'}
-                    stroke="#0a0a0a"
-                    strokeWidth="2"
-                  ><title>{`${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM`}</title></circle>
+                    r={isSelected ? 6 : isLast ? 4.5 : 3.5}
+                    fill={isSelected ? '#d0f0dc' : isLast ? '#9cceb0' : '#71b593'}
+                    stroke={isSelected ? '#71b593' : '#0a0a0a'}
+                    strokeWidth={isSelected ? 3 : 2}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={pointLabel}
+                    onClick={() => setSelectedProgressPoint(point.dateISO)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedProgressPoint(point.dateISO);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  ><title>{pointLabel}</title></circle>
                 </g>
               );
             })}
@@ -372,12 +388,14 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         )}
 
         {/* Current Stat highlight */}
-        {progressionData.length > 0 && <div className="flex items-center justify-between text-xs pt-1 px-1">
-          <span className="text-neutral-400">
-            Latest month: <span className="font-bold text-white">{progressionData[progressionData.length - 1]?.maxWeight} {settings.weightUnit} × {progressionData[progressionData.length - 1]?.reps} reps</span>
+        {activeProgressPoint && <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs">
+          <span className="min-w-0 text-neutral-400">
+            <span className="block text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{activeProgressPoint.dateISO === progressionData[progressionData.length - 1]?.dateISO ? 'Latest month' : 'Selected month'}</span>
+            <span className="font-bold text-white">{activeProgressPoint.maxWeight} {settings.weightUnit} × {activeProgressPoint.reps} reps</span>
+            <span className="ml-1.5 text-neutral-500">{new Date(activeProgressPoint.dateISO).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
           </span>
-          <span className="text-emerald-400 font-bold font-mono">
-            Est. 1RM: {progressionData[progressionData.length - 1]?.estimated1RM} {settings.weightUnit}
+          <span className="shrink-0 font-mono font-bold text-emerald-400">
+            Est. 1RM: {Math.round(activeProgressPoint.estimated1RM)} {settings.weightUnit}
           </span>
         </div>}
       </div>
