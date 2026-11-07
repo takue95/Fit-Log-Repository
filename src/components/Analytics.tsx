@@ -14,6 +14,7 @@ import {
 import { CompletedWorkout, BodyWeightEntry, UserSettings, Exercise } from '../types/fitness';
 import { calculate1RM } from '../utils/fitnessCalc';
 import { MuscleEngagementHeatmap } from './MuscleEngagementHeatmap';
+import { TrendLineChart } from './TrendLineChart';
 
 interface AnalyticsProps {
   history: CompletedWorkout[];
@@ -45,9 +46,25 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     { id: 'barbell-bent-over-row', name: 'Barbell Row' }
   ];
 
+  const compoundNamePatterns: Record<string, RegExp> = {
+    'barbell-bench-press': /(?:barbell\s+)?bench\s+press/i,
+    'barbell-back-squat': /(?:barbell\s+)?back\s+squat|squat/i,
+    'barbell-deadlift': /deadlift/i,
+    'overhead-press': /overhead\s+press|military\s+press/i,
+    'barbell-bent-over-row': /(?:barbell\s+)?(?:bent.?over\s+)?row/i
+  };
+
+  const matchesTrackedCompound = (exercise: CompletedWorkout['exercises'][number], compoundId: string) => {
+    if (exercise.exerciseId === compoundId) return true;
+    const name = exercise.exerciseName.toLowerCase();
+    if (compoundId === 'barbell-bench-press' && /dumbbell|machine|smith/i.test(name)) return false;
+    if (compoundId === 'barbell-bent-over-row' && /cable|machine|dumbbell|seated/i.test(name)) return false;
+    return compoundNamePatterns[compoundId]?.test(name) ?? false;
+  };
+
   // Extract progression points for the selected compound from history
   const progressionData = React.useMemo(() => {
-    const points: { date: string; maxWeight: number; estimated1RM: number; reps: number }[] = [];
+    const points: { date: string; dateISO: string; maxWeight: number; estimated1RM: number; reps: number }[] = [];
 
     // Reverse to chronological order
     const sortedHistory = [...history].sort(
@@ -55,7 +72,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     );
 
     sortedHistory.forEach((w) => {
-      const match = w.exercises.find((e) => e.exerciseId === selectedPRCompound);
+      const match = w.exercises.find((e) => matchesTrackedCompound(e, selectedPRCompound));
       if (match) {
         const completedSets = match.sets.filter((s) => s.completed && s.weight > 0 && s.reps > 0);
         if (completedSets.length > 0) {
@@ -75,6 +92,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
           points.push({
             date: new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            dateISO: w.date,
             maxWeight: bestWeight,
             estimated1RM: best1RM,
             reps: bestReps
@@ -83,27 +101,12 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
       }
     });
 
-    // Provide baseline data points if user has fewer history logs
-    if (points.length < 3) {
-      const baselineWeights: Record<string, number> = {
-        'barbell-bench-press': 225,
-        'barbell-back-squat': 275,
-        'barbell-deadlift': 315,
-        'overhead-press': 135,
-        'barbell-bent-over-row': 175
-      };
-      const base = baselineWeights[selectedPRCompound] || 150;
-      return [
-        { date: 'Sep 28', maxWeight: Math.round(base * 0.88), estimated1RM: Math.round(base * 0.92), reps: 6 },
-        { date: 'Oct 05', maxWeight: Math.round(base * 0.93), estimated1RM: Math.round(base * 0.96), reps: 5 },
-        { date: 'Oct 12', maxWeight: Math.round(base * 0.97), estimated1RM: Math.round(base * 1.01), reps: 5 },
-        { date: 'Oct 19', maxWeight: base, estimated1RM: Math.round(base * 1.05), reps: 6 },
-        ...points
-      ];
-    }
-
     return points;
   }, [history, selectedPRCompound]);
+
+  const growthPercent = progressionData.length > 1
+    ? ((progressionData[progressionData.length - 1].estimated1RM - progressionData[0].estimated1RM) / progressionData[0].estimated1RM) * 100
+    : null;
 
   // SVG Chart Dimensions
   const chartHeight = 160;
@@ -111,8 +114,10 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   const paddingX = 35;
   const paddingY = 25;
 
-  const minVal = Math.min(...progressionData.map((d) => d.estimated1RM)) * 0.9;
-  const maxVal = Math.max(...progressionData.map((d) => d.estimated1RM)) * 1.1;
+  const rawMin = progressionData.length ? Math.min(...progressionData.map((d) => d.estimated1RM)) : 0;
+  const rawMax = progressionData.length ? Math.max(...progressionData.map((d) => d.estimated1RM)) : 1;
+  const minVal = Math.max(0, rawMin - Math.max((rawMax - rawMin) * 0.2, rawMax * 0.06, 1));
+  const maxVal = rawMax + Math.max((rawMax - rawMin) * 0.2, rawMax * 0.06, 1);
 
   const pointsString = progressionData
     .map((d, idx) => {
@@ -122,35 +127,68 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     })
     .join(' ');
 
-  // Compute Volume by Week (last 5 weeks)
-  const weeklyVolumeBars = [
-    { week: 'W1', vol: 48, label: '48k' },
-    { week: 'W2', vol: 54, label: '54k' },
-    { week: 'W3', vol: 51, label: '51k' },
-    { week: 'W4', vol: 62, label: '62k' },
-    { week: 'W5 (Current)', vol: 58, label: '58k' }
-  ];
+  const weeklyVolumeBars = React.useMemo(() => {
+    const today = new Date();
+    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    return Array.from({ length: 5 }, (_, index) => {
+      const start = new Date(monday);
+      start.setDate(start.getDate() - (4 - index) * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      const vol = history.reduce((sum, workout) => {
+        const date = new Date(workout.date);
+        return date >= start && date < end ? sum + workout.totalVolume : sum;
+      }, 0);
+      return {
+        week: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        vol,
+        label: vol >= 1000 ? `${(vol / 1000).toFixed(vol >= 10000 ? 0 : 1)}k` : `${Math.round(vol)}`
+      };
+    });
+  }, [history]);
+  const maxWeeklyVolume = Math.max(1, ...weeklyVolumeBars.map((bar) => bar.vol));
 
-  // Muscle Split Distribution
-  const muscleDistribution = [
-    { group: 'Back & Lats', pct: 28, color: 'bg-emerald-700' },
-    { group: 'Chest', pct: 24, color: 'bg-emerald-500' },
-    { group: 'Quads & Glutes', pct: 22, color: 'bg-emerald-300' },
-    { group: 'Shoulders', pct: 14, color: 'bg-emerald-900' },
-    { group: 'Arms & Core', pct: 12, color: 'bg-neutral-500' }
-  ];
+  const muscleDistribution = React.useMemo(() => {
+    const setCounts = new Map<string, number>();
+    history.forEach((workout) => workout.exercises.forEach((exercise) => {
+      if (exercise.category === 'Cardio') return;
+      const completed = exercise.sets.filter((set) => set.completed && set.reps > 0).length;
+      if (completed) setCounts.set(exercise.category, (setCounts.get(exercise.category) ?? 0) + completed);
+    }));
+    const total = Array.from(setCounts.values()).reduce((sum, value) => sum + value, 0);
+    const colors = ['bg-emerald-500', 'bg-emerald-700', 'bg-emerald-300', 'bg-teal-500', 'bg-neutral-500'];
+    return Array.from(setCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([group, count], index) => ({ group, pct: total ? Math.round((count / total) * 100) : 0, color: colors[index] }));
+  }, [history]);
 
-  // PR Records
   const allPRs = React.useMemo(() => {
-    const list: { exercise: string; weight: number; reps: number; date: string }[] = [
-      { exercise: 'Conventional Barbell Deadlift', weight: 315, reps: 5, date: '3 days ago' },
-      { exercise: 'Barbell Back Squat', weight: 275, reps: 5, date: '5 days ago' },
-      { exercise: 'Barbell Bench Press', weight: 225, reps: 6, date: 'Yesterday' },
-      { exercise: 'Standing Overhead Barbell Press', weight: 135, reps: 6, date: 'Yesterday' },
-      { exercise: 'Incline Dumbbell Press', weight: 75, reps: 10, date: 'Yesterday' }
-    ];
-    return list;
-  }, []);
+    const bestByExercise = new Map<string, { exercise: string; weight: number; reps: number; estimated1RM: number; date: string; dateValue: number }>();
+    history.forEach((workout) => workout.exercises.forEach((exercise) => exercise.sets.forEach((set) => {
+      if (!set.completed || set.weight <= 0 || set.reps <= 0) return;
+      const key = exercise.exerciseName.trim().toLowerCase();
+      const estimated1RM = calculate1RM(set.weight, set.reps);
+      const current = bestByExercise.get(key);
+      if (!current || estimated1RM > current.estimated1RM) {
+        bestByExercise.set(key, {
+          exercise: exercise.exerciseName,
+          weight: set.weight,
+          reps: set.reps,
+          estimated1RM,
+          date: new Date(workout.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+          dateValue: new Date(workout.date).getTime()
+        });
+      }
+    })));
+    return Array.from(bestByExercise.values()).sort((a, b) => b.estimated1RM - a.estimated1RM).slice(0, 6);
+  }, [history]);
+
+  const bodyweightPoints = React.useMemo(() => [...bodyWeights]
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(-12)
+    .map((entry) => ({ date: entry.date, value: entry.weight })), [bodyWeights]);
 
   const handleSaveBw = (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,9 +225,11 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                 1RM Strength Curve
               </span>
-              <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                +14.2% Growth
-              </span>
+              {growthPercent !== null && (
+                <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
+                  {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% since first log
+                </span>
+              )}
             </div>
             <h3 className="text-lg font-bold text-white mt-0.5">
               Estimated One Rep Max
@@ -211,7 +251,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         </div>
 
         {/* SVG Curve */}
-        <div className="relative w-full overflow-hidden bg-neutral-950/60 rounded-2xl p-2 border border-neutral-800/80">
+        {progressionData.length ? <div className="relative w-full overflow-hidden bg-neutral-950/60 rounded-2xl p-2 border border-neutral-800/80">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             className="w-full h-44 overflow-visible"
@@ -308,17 +348,21 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               );
             })}
           </svg>
-        </div>
+        </div> : (
+          <div className="flex min-h-44 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-950/50 px-6 text-center text-xs text-neutral-500">
+            No logged sets for this lift yet. Your strength curve will start when it appears in a completed workout.
+          </div>
+        )}
 
         {/* Current Stat highlight */}
-        <div className="flex items-center justify-between text-xs pt-1 px-1">
+        {progressionData.length > 0 && <div className="flex items-center justify-between text-xs pt-1 px-1">
           <span className="text-neutral-400">
             Latest: <span className="font-bold text-white">{progressionData[progressionData.length - 1]?.maxWeight} {settings.weightUnit} × {progressionData[progressionData.length - 1]?.reps} reps</span>
           </span>
           <span className="text-emerald-400 font-bold font-mono">
             Est. 1RM: {progressionData[progressionData.length - 1]?.estimated1RM} {settings.weightUnit}
           </span>
-        </div>
+        </div>}
       </div>
 
       {/* Muscle Engagement Heat Map (7-Day Biometrics) */}
@@ -358,7 +402,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                     <span className="text-xs font-bold text-white block truncate">
                       {pr.exercise}
                     </span>
-                    <span className="text-[10px] text-neutral-400">{pr.date}</span>
+                    <span className="text-[10px] text-neutral-400">Best set · {pr.date}</span>
                   </div>
                 </div>
 
@@ -373,6 +417,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               </div>
             );
           })}
+          {!allPRs.length && <p className="col-span-full py-5 text-center text-xs text-neutral-500">Completed strength sets will appear here as personal bests.</p>}
         </div>
       </div>
 
@@ -390,7 +435,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
           <div className="flex items-end justify-between h-36 pt-4 px-2">
             {weeklyVolumeBars.map((bar, i) => {
-              const heightPct = Math.round((bar.vol / 70) * 100);
+              const heightPct = bar.vol > 0 ? Math.max(5, Math.round((bar.vol / maxWeeklyVolume) * 100)) : 0;
               const isCurrent = i === weeklyVolumeBars.length - 1;
 
               return (
@@ -401,7 +446,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                   <div className="w-7 bg-neutral-800 rounded-t-lg h-24 flex items-end p-0.5">
                     <div
                       className={`w-full rounded-t-md transition-all duration-500 ${
-                        isCurrent
+                        isCurrent && bar.vol > 0
                           ? 'bg-gradient-to-t from-emerald-500 to-emerald-400'
                           : 'bg-neutral-700 hover:bg-neutral-600'
                       }`}
@@ -415,6 +460,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               );
             })}
           </div>
+          {!history.length && <p className="text-center text-[10px] text-neutral-500">No workout volume logged yet.</p>}
         </div>
 
         {/* Muscle Distribution Breakdown */}
@@ -450,6 +496,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                 <span className="font-mono font-bold text-white">{m.pct}%</span>
               </div>
             ))}
+            {!muscleDistribution.length && <p className="py-4 text-center text-xs text-neutral-500">Muscle group totals will appear after strength workouts are logged.</p>}
           </div>
         </div>
       </div>
@@ -475,6 +522,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             Log Weight
           </button>
         </div>
+
+        <TrendLineChart points={bodyweightPoints} unit={settings.weightUnit} label="Bodyweight" />
 
         {/* Quick Log Form */}
         {isAddingBw && (
@@ -503,7 +552,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
 
         {/* Weight Entries List */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {bodyWeights.map((bw) => (
+          {[...bodyWeights].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((bw) => (
             <div
               key={bw.id}
               className="p-3 rounded-2xl bg-neutral-950/70 border border-neutral-800/80 flex flex-col text-center gap-1"
@@ -526,3 +575,4 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     </div>
   );
 };
+
