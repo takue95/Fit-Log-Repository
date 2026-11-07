@@ -34,6 +34,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   onOpenOneRMCalc
 }) => {
   const [selectedPRCompound, setSelectedPRCompound] = useState<string>('barbell-bench-press');
+  const [progressionRange, setProgressionRange] = useState<'3M' | '6M' | '12M' | 'All'>('6M');
   const [newBwValue, setNewBwValue] = useState<string>('');
   const [isAddingBw, setIsAddingBw] = useState<boolean>(false);
 
@@ -62,8 +63,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     return compoundNamePatterns[compoundId]?.test(name) ?? false;
   };
 
-  // Extract progression points for the selected compound from history
-  const progressionData = React.useMemo(() => {
+  // Keep the full session history for the selected lift; the chart later summarizes it by month.
+  const sessionProgressionData = React.useMemo(() => {
     const points: { date: string; dateISO: string; maxWeight: number; estimated1RM: number; reps: number }[] = [];
 
     // Reverse to chronological order
@@ -104,6 +105,33 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     return points;
   }, [history, selectedPRCompound]);
 
+  const rangeWindow = React.useMemo(() => {
+    if (!sessionProgressionData.length) return null;
+    const first = new Date(sessionProgressionData[0].dateISO);
+    const latest = new Date(sessionProgressionData[sessionProgressionData.length - 1].dateISO);
+    const end = new Date(latest.getFullYear(), latest.getMonth() + 1, 1);
+    const start = progressionRange === 'All'
+      ? new Date(first.getFullYear(), first.getMonth(), 1)
+      : new Date(latest.getFullYear(), latest.getMonth() - (Number(progressionRange.slice(0, -1)) - 1), 1);
+    return { start, end };
+  }, [sessionProgressionData, progressionRange]);
+
+  const progressionData = React.useMemo(() => {
+    if (!rangeWindow) return [];
+    const startTime = rangeWindow.start.getTime();
+    const endTime = rangeWindow.end.getTime();
+    const bestByMonth = new Map<string, (typeof sessionProgressionData)[number]>();
+    sessionProgressionData.forEach((point) => {
+      const date = new Date(point.dateISO);
+      const time = date.getTime();
+      if (time < startTime || time >= endTime) return;
+      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const current = bestByMonth.get(month);
+      if (!current || point.estimated1RM > current.estimated1RM) bestByMonth.set(month, point);
+    });
+    return Array.from(bestByMonth.values()).sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
+  }, [sessionProgressionData, rangeWindow]);
+
   const growthPercent = progressionData.length > 1
     ? ((progressionData[progressionData.length - 1].estimated1RM - progressionData[0].estimated1RM) / progressionData[0].estimated1RM) * 100
     : null;
@@ -111,21 +139,31 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   // SVG Chart Dimensions
   const chartHeight = 160;
   const chartWidth = 360;
-  const paddingX = 35;
-  const paddingY = 25;
+  const paddingX = 42;
+  const rightX = chartWidth - 14;
+  const paddingY = 24;
 
   const rawMin = progressionData.length ? Math.min(...progressionData.map((d) => d.estimated1RM)) : 0;
   const rawMax = progressionData.length ? Math.max(...progressionData.map((d) => d.estimated1RM)) : 1;
   const minVal = Math.max(0, rawMin - Math.max((rawMax - rawMin) * 0.2, rawMax * 0.06, 1));
   const maxVal = rawMax + Math.max((rawMax - rawMin) * 0.2, rawMax * 0.06, 1);
+  const dateToX = (dateISO: string) => {
+    if (!rangeWindow) return (paddingX + rightX) / 2;
+    const start = rangeWindow.start.getTime();
+    const span = Math.max(1, rangeWindow.end.getTime() - start);
+    const date = new Date(dateISO);
+    return paddingX + ((date.getTime() - start) / span) * (rightX - paddingX);
+  };
+  const dateToY = (value: number) => chartHeight - paddingY - ((value - minVal) / Math.max(1, maxVal - minVal)) * (chartHeight - paddingY * 2);
 
   const pointsString = progressionData
-    .map((d, idx) => {
-      const x = paddingX + (idx / Math.max(1, progressionData.length - 1)) * (chartWidth - paddingX * 2);
-      const y = chartHeight - paddingY - ((d.estimated1RM - minVal) / Math.max(1, maxVal - minVal)) * (chartHeight - paddingY * 2);
-      return `${x},${y}`;
-    })
+    .map((point) => `${dateToX(point.dateISO)},${dateToY(point.estimated1RM)}`)
     .join(' ');
+
+  const formatAxisDate = (date: Date) => date.toLocaleDateString(undefined, {
+    month: 'short',
+    ...(progressionRange === 'All' || rangeWindow && rangeWindow.start.getFullYear() !== new Date(rangeWindow.end.getTime() - 1).getFullYear() ? { year: 'numeric' as const } : {})
+  });
 
   const weeklyVolumeBars = React.useMemo(() => {
     const today = new Date();
@@ -227,7 +265,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
               </span>
               {growthPercent !== null && (
                 <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
-                  {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% since first log
+                  {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% in range
                 </span>
               )}
             </div>
@@ -250,11 +288,30 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           </select>
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[10px] text-neutral-500">Best estimated 1RM per month</span>
+          <div className="grid grid-cols-4 rounded-xl border border-neutral-800 bg-neutral-950 p-1" aria-label="Chart date range">
+            {(['3M', '6M', '12M', 'All'] as const).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => setProgressionRange(range)}
+                aria-pressed={progressionRange === range}
+                className={`min-w-10 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${progressionRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* SVG Curve */}
         {progressionData.length ? <div className="relative w-full overflow-hidden bg-neutral-950/60 rounded-2xl p-2 border border-neutral-800/80">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             className="w-full h-44 overflow-visible"
+            role="img"
+            aria-label={`${trackedCompounds.find((compound) => compound.id === selectedPRCompound)?.name ?? 'Strength'} estimated one rep max trend, ${progressionRange} range`}
           >
             <defs>
               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -264,88 +321,48 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             </defs>
 
             {/* Horizontal Grid lines */}
-            {[0.25, 0.5, 0.75].map((pct, i) => {
-              const y = chartHeight - paddingY - pct * (chartHeight - paddingY * 2);
+            {[0, 0.5, 1].map((fraction) => {
+              const y = chartHeight - paddingY - fraction * (chartHeight - paddingY * 2);
+              const value = minVal + fraction * (maxVal - minVal);
               return (
-                <line
-                  key={i}
-                  x1={paddingX}
-                  y1={y}
-                  x2={chartWidth - paddingX}
-                  y2={y}
-                  stroke="#262626"
-                  strokeDasharray="4 4"
-                  strokeWidth="1"
-                />
+                <g key={fraction}>
+                  <line x1={paddingX} y1={y} x2={rightX} y2={y} stroke="#262626" strokeDasharray="4 4" strokeWidth="1" />
+                  <text x={paddingX - 7} y={y + 3} textAnchor="end" fill="#737373" fontSize="9" fontFamily="monospace">{Math.round(value)}</text>
+                </g>
               );
             })}
 
             {/* Area fill */}
             {progressionData.length > 1 && (
               <polygon
-                points={`${paddingX},${chartHeight - paddingY} ${pointsString} ${
-                  chartWidth - paddingX
-                },${chartHeight - paddingY}`}
+                points={`${paddingX},${chartHeight - paddingY} ${pointsString} ${rightX},${chartHeight - paddingY}`}
                 fill="url(#chartGradient)"
               />
             )}
 
-            {/* Polyline */}
-            <polyline
-              fill="none"
-              stroke="#71b593"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points={pointsString}
-            />
+            {progressionData.length > 1 && <polyline fill="none" stroke="#71b593" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pointsString} />}
 
-            {/* Data points */}
-            {progressionData.map((d, idx) => {
-              const x =
-                paddingX +
-                (idx / Math.max(1, progressionData.length - 1)) *
-                  (chartWidth - paddingX * 2);
-              const y =
-                chartHeight -
-                paddingY -
-                ((d.estimated1RM - minVal) / Math.max(1, maxVal - minVal)) *
-                  (chartHeight - paddingY * 2);
-
-              const isLast = idx === progressionData.length - 1;
-
+            {progressionData.map((point, index) => {
+              const isLast = index === progressionData.length - 1;
               return (
-                <g key={idx}>
+                <g key={point.dateISO}>
                   <circle
-                    cx={x}
-                    cy={y}
-                    r={isLast ? 5 : 4}
+                    cx={dateToX(point.dateISO)}
+                    cy={dateToY(point.estimated1RM)}
+                    r={isLast ? 5 : 3.5}
                     fill={isLast ? '#9cceb0' : '#71b593'}
                     stroke="#0a0a0a"
                     strokeWidth="2"
-                  />
-                  <text
-                    x={x}
-                    y={y - 8}
-                    textAnchor="middle"
-                    fill="#a3a3a3"
-                    fontSize="9"
-                    fontWeight="bold"
-                    fontFamily="monospace"
-                  >
-                    {d.estimated1RM}
-                  </text>
-                  <text
-                    x={x}
-                    y={chartHeight - 8}
-                    textAnchor="middle"
-                    fill="#737373"
-                    fontSize="9"
-                  >
-                    {d.date}
-                  </text>
+                  ><title>{`${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM`}</title></circle>
                 </g>
               );
+            })}
+            {rangeWindow && [0, 0.5, 1].map((fraction) => {
+              const start = rangeWindow.start.getTime();
+              const end = rangeWindow.end.getTime() - 1;
+              const date = new Date(start + (end - start) * fraction);
+              const x = paddingX + fraction * (rightX - paddingX);
+              return <text key={fraction} x={x} y={chartHeight - 5} textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'} fill="#737373" fontSize="9">{formatAxisDate(date)}</text>;
             })}
           </svg>
         </div> : (
@@ -357,7 +374,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         {/* Current Stat highlight */}
         {progressionData.length > 0 && <div className="flex items-center justify-between text-xs pt-1 px-1">
           <span className="text-neutral-400">
-            Latest: <span className="font-bold text-white">{progressionData[progressionData.length - 1]?.maxWeight} {settings.weightUnit} × {progressionData[progressionData.length - 1]?.reps} reps</span>
+            Latest month: <span className="font-bold text-white">{progressionData[progressionData.length - 1]?.maxWeight} {settings.weightUnit} × {progressionData[progressionData.length - 1]?.reps} reps</span>
           </span>
           <span className="text-emerald-400 font-bold font-mono">
             Est. 1RM: {progressionData[progressionData.length - 1]?.estimated1RM} {settings.weightUnit}
