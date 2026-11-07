@@ -38,6 +38,7 @@ import {
   AdaptiveSuggestion 
 } from '../utils/fitnessCalc';
 import { ExerciseSwapModal } from './modals/ExerciseSwapModal';
+import { NumericInput } from './NumericInput';
 
 interface ActiveWorkoutProps {
   workout: ActiveWorkout;
@@ -658,7 +659,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
               )}
 
               {/* Sets Table */}
-              <div className="p-3 overflow-x-auto">
+              <div className="hidden p-3 sm:block">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 border-b border-neutral-800/80 pb-2">
@@ -732,20 +733,14 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                           <td className="py-2.5 px-1 text-center">
                             <div className="inline-flex items-center justify-center gap-1">
                               {isManualWeight ? (
-                                <input
-                                  type="number"
-                                  step={exercise.equipment === 'Dumbbell' ? '1' : '2.5'}
-                                  value={set.weight || ''}
-                                  onChange={(e) =>
-                                    updateSetValue(
-                                      exercise.id,
-                                      set.id,
-                                      'weight',
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  className="w-20 bg-neutral-950 border border-neutral-700/80 rounded-lg px-2 py-1 text-center font-bold text-white text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                                <NumericInput
+                                  value={set.weight}
+                                  onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)}
+                                  min={0}
+                                  step={exercise.equipment === 'Dumbbell' ? 1 : 2.5}
+                                  className="h-10 w-28 sm:w-32 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
                                   placeholder="0"
+                                  aria-label={`Set ${sIdx + 1} weight`}
                                 />
                               ) : (
                                 <select
@@ -763,7 +758,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                                       );
                                     }
                                   }}
-                                  className="w-28 sm:w-32 bg-neutral-950 border border-neutral-700/80 hover:border-neutral-600 rounded-lg px-2 py-1 text-center font-bold text-white text-xs focus:outline-none focus:border-emerald-500 font-mono transition cursor-pointer"
+                                  className="h-10 w-28 sm:w-32 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white transition hover:border-neutral-600 focus:border-emerald-500 focus:outline-none cursor-pointer"
                                 >
                                   {!hasCurrentWeightInOptions && set.weight > 0 && (
                                     <option value={set.weight}>
@@ -795,20 +790,14 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                           <td className="py-2.5 px-1 text-center">
                             <div className="inline-flex items-center justify-center gap-1">
                               {isManualReps ? (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={set.reps || ''}
-                                  onChange={(e) =>
-                                    updateSetValue(
-                                      exercise.id,
-                                      set.id,
-                                      'reps',
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                  className="w-14 bg-neutral-950 border border-neutral-700/80 rounded-lg px-2 py-1 text-center font-bold text-white text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                                <NumericInput
+                                  value={set.reps}
+                                  onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))}
+                                  min={1}
+                                  step={1}
+                                  className="h-10 w-16 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
                                   placeholder="Reps"
+                                  aria-label={`Set ${sIdx + 1} reps`}
                                 />
                               ) : (
                                 <select
@@ -826,7 +815,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                                       );
                                     }
                                   }}
-                                  className="w-16 bg-neutral-950 border border-neutral-700/80 hover:border-neutral-600 rounded-lg px-2 py-1 text-center font-bold text-white text-xs focus:outline-none focus:border-emerald-500 font-mono transition cursor-pointer"
+                                  className="h-10 w-16 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white transition hover:border-neutral-600 focus:border-emerald-500 focus:outline-none cursor-pointer"
                                 >
                                   {!standardRepOptions.includes(set.reps) && set.reps > 0 && (
                                     <option value={set.reps}>{set.reps} reps</option>
@@ -896,6 +885,153 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Compact set editor for phones: no horizontal scrolling */}
+              <div className="space-y-2 p-3 sm:hidden">
+                {exercise.sets.map((set, sIdx) => {
+                  const isWarmup = set.type === 'warmup';
+                  const isDrop = set.type === 'drop';
+                  const isManualWeight = !!manualInputSets[set.id]?.weight;
+                  const isManualReps = !!manualInputSets[set.id]?.reps;
+                  const hasCurrentWeightInOptions = weightOptions.some((option) => option.value === set.weight);
+                  const previousLabel = set.previousWeight !== undefined && set.previousWeight > 0
+                    ? `Prev ${set.previousWeight} × ${set.previousReps || 8}`
+                    : 'New set';
+
+                  return (
+                    <section
+                      key={set.id}
+                      className={`rounded-xl border p-3 ${set.completed ? 'border-emerald-900/70 bg-emerald-950/20' : 'border-neutral-800 bg-neutral-900/50'}`}
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextType: SetType = set.type === 'normal' ? 'warmup' : set.type === 'warmup' ? 'drop' : 'normal';
+                              updateSetValue(exercise.id, set.id, 'type', nextType);
+                            }}
+                            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg font-mono text-[11px] font-bold ${isWarmup ? 'border border-emerald-500/40 bg-emerald-500/20 text-emerald-300' : isDrop ? 'border border-neutral-500/40 bg-neutral-500/20 text-neutral-300' : 'bg-neutral-800 text-neutral-200'}`}
+                            aria-label={`Set ${sIdx + 1}, ${isWarmup ? 'warmup' : isDrop ? 'drop set' : 'normal set'}; tap to change type`}
+                          >
+                            {isWarmup ? 'W' : isDrop ? 'D' : sIdx + 1}
+                          </button>
+                          <div className="min-w-0">
+                            <span className="block text-[11px] font-semibold text-neutral-200">Set {sIdx + 1}</span>
+                            <span className="block truncate font-mono text-[10px] text-neutral-500">{previousLabel}</span>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-end gap-2">
+                          <label className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-500">
+                            RPE
+                            <select
+                              value={set.rpe || ''}
+                              onChange={(event) => updateSetValue(exercise.id, set.id, 'rpe', event.target.value ? parseFloat(event.target.value) : undefined)}
+                              aria-label={`Set ${sIdx + 1} RPE`}
+                              className="h-9 w-[3.7rem] rounded-lg border border-neutral-700 bg-neutral-950 px-1 text-center font-mono text-xs text-neutral-200 focus:border-emerald-500 focus:outline-none"
+                            >
+                              <option value="">—</option>
+                              <option value="6">6</option><option value="7">7</option><option value="7.5">7.5</option>
+                              <option value="8">8</option><option value="8.5">8.5</option><option value="9">9</option>
+                              <option value="9.5">9.5</option><option value="10">10</option>
+                            </select>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => toggleSetComplete(exercise.id, set.id)}
+                            className={`grid h-9 w-9 place-items-center rounded-lg transition ${set.completed ? 'bg-emerald-500 text-neutral-950' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-200'}`}
+                            aria-label={set.completed ? `Mark set ${sIdx + 1} incomplete` : `Mark set ${sIdx + 1} complete`}
+                          >
+                            <Check className="h-4 w-4 stroke-[3]" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">
+                            {exercise.equipment === 'Dumbbell' ? `Weight (${settings.weightUnit}/ea)` : `Weight (${settings.weightUnit})`}
+                          </span>
+                          <span className="flex min-w-0 gap-1">
+                            {isManualWeight ? (
+                              <NumericInput
+                                value={set.weight}
+                                onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)}
+                                min={0}
+                                step={exercise.equipment === 'Dumbbell' ? 1 : 2.5}
+                                aria-label={`Set ${sIdx + 1} weight`}
+                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
+                              />
+                            ) : (
+                              <select
+                                value={set.weight}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  if (value === '__custom__') toggleManualInput(set.id, 'weight');
+                                  else updateSetValue(exercise.id, set.id, 'weight', parseFloat(value) || 0);
+                                }}
+                                aria-label={`Set ${sIdx + 1} weight`}
+                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-1 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
+                              >
+                                {!hasCurrentWeightInOptions && set.weight > 0 && <option value={set.weight}>{set.weight} {settings.weightUnit}</option>}
+                                {weightOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                                <option value="__custom__">Custom…</option>
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => toggleManualInput(set.id, 'weight')}
+                              className="grid h-10 w-9 shrink-0 place-items-center rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-200"
+                              aria-label={isManualWeight ? 'Choose weight from list' : 'Enter custom weight'}
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </label>
+
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">Reps</span>
+                          <span className="flex min-w-0 gap-1">
+                            {isManualReps ? (
+                              <NumericInput
+                                value={set.reps}
+                                onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))}
+                                min={1}
+                                step={1}
+                                aria-label={`Set ${sIdx + 1} reps`}
+                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-2 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
+                              />
+                            ) : (
+                              <select
+                                value={set.reps}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  if (value === '__custom__') toggleManualInput(set.id, 'reps');
+                                  else updateSetValue(exercise.id, set.id, 'reps', parseInt(value) || 0);
+                                }}
+                                aria-label={`Set ${sIdx + 1} reps`}
+                                className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-700/80 bg-neutral-950 px-1 text-center font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
+                              >
+                                {!standardRepOptions.includes(set.reps) && set.reps > 0 && <option value={set.reps}>{set.reps} reps</option>}
+                                {standardRepOptions.map((rep) => <option key={rep} value={rep}>{rep}</option>)}
+                                <option value="__custom__">Custom</option>
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => toggleManualInput(set.id, 'reps')}
+                              className="grid h-10 w-9 shrink-0 place-items-center rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-200"
+                              aria-label={isManualReps ? 'Choose reps from list' : 'Enter custom reps'}
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </label>
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
 
               {/* Add Set Footer */}

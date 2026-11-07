@@ -13,6 +13,7 @@ import {
   Target
 } from 'lucide-react';
 import { RoutineTemplate, Exercise } from '../types/fitness';
+import { NumericInput } from './NumericInput';
 
 interface RoutinesProps {
   routines: RoutineTemplate[];
@@ -405,35 +406,35 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                           <span className="text-[11px] text-neutral-400">Sets:</span>
-                          <input
-                            type="number"
-                            min="1"
-                            max="10"
+                          <NumericInput
                             value={item.defaultSets}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 1;
+                            min={1}
+                            max={10}
+                            step={1}
+                            onValueChange={(value) => {
                               setSelectedExIds((prev) =>
-                                prev.map((it, i) => (i === idx ? { ...it, defaultSets: val } : it))
+                                prev.map((it, i) => (i === idx ? { ...it, defaultSets: value } : it))
                               );
                             }}
-                            className="w-10 bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 text-center font-mono font-bold text-white"
+                            aria-label={`${ex?.name || 'Exercise'} sets`}
+                            className="w-10 rounded border border-neutral-700 bg-neutral-900 px-1.5 py-0.5 text-center font-mono font-bold text-white"
                           />
                         </div>
 
                         <div className="flex items-center gap-1">
                           <span className="text-[11px] text-neutral-400">Reps:</span>
-                          <input
-                            type="number"
-                            min="1"
-                            max="50"
+                          <NumericInput
                             value={item.defaultReps}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 1;
+                            min={1}
+                            max={50}
+                            step={1}
+                            onValueChange={(value) => {
                               setSelectedExIds((prev) =>
-                                prev.map((it, i) => (i === idx ? { ...it, defaultReps: val } : it))
+                                prev.map((it, i) => (i === idx ? { ...it, defaultReps: value } : it))
                               );
                             }}
-                            className="w-12 bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 text-center font-mono font-bold text-white"
+                            aria-label={`${ex?.name || 'Exercise'} reps`}
+                            className="w-12 rounded border border-neutral-700 bg-neutral-900 px-1.5 py-0.5 text-center font-mono font-bold text-white"
                           />
                         </div>
 

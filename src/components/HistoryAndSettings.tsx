@@ -22,6 +22,7 @@ import {
   User
 } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
+import { NumericInput } from './NumericInput';
 
 type HistoryTab = 'history' | 'exercises' | 'settings';
 
@@ -499,15 +500,14 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                 <label className="text-[11px] font-bold text-neutral-400">
                   Body Weight ({settings.weightUnit.toUpperCase()})
                 </label>
-                <input
-                  type="number"
-                  min="30"
-                  max="500"
+                <NumericInput
+                  min={30}
+                  max={500}
+                  step={0.1}
                   value={settings.userWeight || (settings.weightUnit === 'lbs' ? 165 : 75)}
-                  onChange={(e) =>
-                    onUpdateSettings({ userWeight: parseFloat(e.target.value) || 0 })
-                  }
-                  className="bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
+                  onValueChange={(value) => onUpdateSettings({ userWeight: value })}
+                  aria-label={`Body weight in ${settings.weightUnit}`}
+                  className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -516,15 +516,14 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                 <label className="text-[11px] font-bold text-neutral-400">
                   Height (cm)
                 </label>
-                <input
-                  type="number"
-                  min="100"
-                  max="250"
+                <NumericInput
+                  min={100}
+                  max={250}
+                  step={1}
                   value={settings.userHeightCm || 178}
-                  onChange={(e) =>
-                    onUpdateSettings({ userHeightCm: parseInt(e.target.value) || 0 })
-                  }
-                  className="bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
+                  onValueChange={(value) => onUpdateSettings({ userHeightCm: Math.round(value) })}
+                  aria-label="Height in centimeters"
+                  className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-xs font-bold text-white focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 

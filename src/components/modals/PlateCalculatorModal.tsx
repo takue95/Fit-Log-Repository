@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Dumbbell, ArrowRight } from 'lucide-react';
 import { calculateBarbellPlates } from '../../utils/fitnessCalc';
+import { NumericInput } from '../NumericInput';
 
 interface PlateCalculatorModalProps {
   initialWeight?: number;
@@ -50,11 +51,11 @@ export const PlateCalculatorModal: React.FC<PlateCalculatorModalProps> = ({
             Target Total Weight ({unit})
           </label>
           <div className="flex items-center gap-3">
-            <input
-              type="number"
-              step={unit === 'lbs' ? '5' : '2.5'}
-              value={weight || ''}
-              onChange={(e) => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
+            <NumericInput
+              value={weight}
+              min={result.barWeight}
+              step={unit === 'lbs' ? 5 : 2.5}
+              onValueChange={setWeight}
               className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-2xl font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
             />
             <div className="flex flex-col gap-1">

@@ -483,10 +483,11 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             className="p-3.5 bg-neutral-950 rounded-2xl border border-neutral-800 flex items-center gap-2 animate-in fade-in"
           >
             <input
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               placeholder={`Enter weight (${settings.weightUnit})...`}
               value={newBwValue}
+              onFocus={(event) => event.currentTarget.select()}
               onChange={(e) => setNewBwValue(e.target.value)}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               autoFocus

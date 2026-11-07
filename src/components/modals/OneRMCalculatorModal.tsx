@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calculator, Target, Zap } from 'lucide-react';
 import { calculate1RM, calculateBrzycki1RM } from '../../utils/fitnessCalc';
+import { NumericInput } from '../NumericInput';
 
 interface OneRMCalculatorModalProps {
   unit: 'lbs' | 'kg';
@@ -57,10 +58,11 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
             <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block mb-1.5">
               Weight Lifted ({unit})
             </label>
-            <input
-              type="number"
-              value={weight || ''}
-              onChange={(e) => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
+            <NumericInput
+              value={weight}
+              min={0}
+              step={0.1}
+              onValueChange={setWeight}
               className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-white focus:outline-none focus:border-neutral-500 font-mono"
             />
           </div>
@@ -70,12 +72,12 @@ export const OneRMCalculatorModal: React.FC<OneRMCalculatorModalProps> = ({
               Reps Performed
             </label>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                max="30"
-                value={reps || ''}
-                onChange={(e) => setReps(Math.max(1, parseInt(e.target.value) || 1))}
+              <NumericInput
+                value={reps}
+                min={1}
+                max={30}
+                step={1}
+                onValueChange={(value) => setReps(Math.round(value))}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xl font-bold text-neutral-400 focus:outline-none focus:border-neutral-500 font-mono"
               />
             </div>
