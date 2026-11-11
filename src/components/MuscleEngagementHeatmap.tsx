@@ -14,8 +14,6 @@ import {
 import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
 import { MuscleMap } from '@musclemap/react';
 import type { MuscleGroup, MuscleMapValues } from '@musclemap/core';
-import maleFront from '@musclemap/assets/bodies/male-front.webp';
-import maleBack from '@musclemap/assets/bodies/male-back.webp';
 
 interface MuscleEngagementHeatmapProps {
   history: CompletedWorkout[];
@@ -473,11 +471,6 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               tooltipFields={[]}
               labels={MUSCLE_MAP_LABELS}
               figureWidth={220}
-              backgroundImageFront={maleFront}
-              backgroundImageBack={maleBack}
-              backgroundGrayscale
-              backgroundBrightness={1.05}
-              backgroundOpacity={0.45}
               onSelectMuscle={({ group }) => {
                 const muscle = MAP_GROUP_TO_MUSCLE[group];
                 if (muscle) {
