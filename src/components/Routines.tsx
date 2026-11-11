@@ -185,6 +185,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     } catch {
       // Keep the selection available for this session if browser storage is disabled.
     }
+    window.dispatchEvent(new CustomEvent('fitlog-split-change', { detail: selectedSplit }));
   }, [selectedSplit]);
 
   // New routine builder form state

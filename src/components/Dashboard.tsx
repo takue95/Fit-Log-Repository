@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Calculator,
   Check,
@@ -30,7 +30,43 @@ interface DashboardProps {
   onOpenOneRMCalc: () => void;
 }
 
+const SPLIT_PREFERENCE_KEY = 'fitlog_current_split_v1';
+const SPLIT_CHANGE_EVENT = 'fitlog-split-change';
+
 const startOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const splitNameForRoutine = (routine: RoutineTemplate) => {
+  if (routine.title.toLowerCase().includes('arnold split')) return 'Arnold Split';
+  if (routine.isCustom || routine.category === 'Custom') return 'Custom';
+  return routine.category;
+};
+
+const inferCurrentSplit = (
+  routines: RoutineTemplate[],
+  history: CompletedWorkout[],
+  activeWorkout: ActiveWorkout | null
+) => {
+  const activeRoutine = activeWorkout?.routineId
+    ? routines.find((routine) => routine.id === activeWorkout.routineId)
+    : undefined;
+  if (activeRoutine) return splitNameForRoutine(activeRoutine);
+
+  const recentWorkouts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  for (const workout of recentWorkouts) {
+    const routine = routines.find((item) =>
+      (workout as CompletedWorkout & { routineId?: string }).routineId === item.id ||
+      item.title.toLowerCase() === workout.title.toLowerCase()
+    );
+    if (routine) return splitNameForRoutine(routine);
+  }
+
+  const available = Array.from(new Set(routines.map(splitNameForRoutine)));
+  return available.includes('Arnold Split')
+    ? 'Arnold Split'
+    : available.includes('Push / Pull / Legs')
+      ? 'Push / Pull / Legs'
+      : available[0] || 'All';
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   routines,
@@ -49,6 +85,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [isAddingWeight, setIsAddingWeight] = useState(false);
   const [weightInput, setWeightInput] = useState('');
+  const [selectedSplit, setSelectedSplit] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(SPLIT_PREFERENCE_KEY);
+      if (saved && routines.some((routine) => splitNameForRoutine(routine) === saved)) return saved;
+    } catch {
+      // Fall back to the split inferred from the current workout history.
+    }
+    return inferCurrentSplit(routines, history, activeWorkout);
+  });
+
+  useEffect(() => {
+    const syncSplit = (split: string) => {
+      if (routines.some((routine) => splitNameForRoutine(routine) === split)) setSelectedSplit(split);
+    };
+    const handleSplitChange = (event: Event) => {
+      const split = (event as CustomEvent<string>).detail;
+      if (typeof split === 'string') syncSplit(split);
+    };
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem(SPLIT_PREFERENCE_KEY);
+        if (saved) syncSplit(saved);
+      } catch {
+        // Keep the current in-memory choice if storage is unavailable.
+      }
+    };
+
+    window.addEventListener(SPLIT_CHANGE_EVENT, handleSplitChange);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener(SPLIT_CHANGE_EVENT, handleSplitChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [routines]);
   const now = new Date();
   const localToday = startOfLocalDay(now);
   const weekStart = new Date(localToday);
@@ -71,29 +141,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return { date, label: date.toLocaleDateString(undefined, { weekday: 'short' }), hasWorkout, isToday: date.getTime() === localToday.getTime() };
   });
 
-  const arnoldRoutines = routines
+  const activeRoutine = activeWorkout?.routineId
+    ? routines.find((routine) => routine.id === activeWorkout.routineId)
+    : undefined;
+  const splitRoutines = routines.filter((routine) => splitNameForRoutine(routine) === selectedSplit);
+  const lastSplitWorkout = recentHistory.find((workout) =>
+    splitRoutines.some((routine) =>
+      routine.title.toLowerCase() === workout.title.toLowerCase() ||
+      (workout as CompletedWorkout & { routineId?: string }).routineId === routine.id
+    )
+  );
+  const lastSplitIndex = splitRoutines.findIndex((routine) =>
+    routine.title.toLowerCase() === lastSplitWorkout?.title.toLowerCase() ||
+    routine.id === (lastSplitWorkout as (CompletedWorkout & { routineId?: string }) | undefined)?.routineId
+  );
+  const nextSplitRoutine = splitRoutines.length > 0
+    ? splitRoutines[(lastSplitIndex + 1) % splitRoutines.length]
+    : undefined;
+
+  const arnoldRoutines = splitRoutines
     .filter((routine) => routine.title.toLowerCase().includes('arnold split'))
     .sort((a, b) => {
       const order = (title: string) => title.toLowerCase().includes('chest & back') ? 0 : title.toLowerCase().includes('legs') ? 1 : title.toLowerCase().includes('shoulders & arms') ? 2 : 3;
       return order(a.title) - order(b.title);
     });
-  const lastArnoldWorkout = recentHistory.find((workout) =>
-    workout.title.toLowerCase().includes('arnold split')
+  const lastArnoldIndex = arnoldRoutines.findIndex((routine) =>
+    routine.title.toLowerCase() === lastSplitWorkout?.title.toLowerCase()
   );
-  const activeRoutine = activeWorkout?.routineId
-    ? routines.find((routine) => routine.id === activeWorkout.routineId)
-    : undefined;
-  const lastArnoldIndex = arnoldRoutines.findIndex((routine) => routine.title === lastArnoldWorkout?.title);
-  const nextArnoldRoutine = lastArnoldIndex >= 0
+  const nextArnoldRoutine = arnoldRoutines.length > 0
     ? arnoldRoutines[(lastArnoldIndex + 1) % arnoldRoutines.length]
-    : arnoldRoutines[0];
-  const pplRoutines = routines.filter((routine) => routine.category === 'Push / Pull / Legs');
-  const lastPplWorkout = recentHistory.find((workout) => pplRoutines.some((routine) => routine.title === workout.title));
-  const lastTitle = lastPplWorkout?.title.toLowerCase() ?? '';
+    : undefined;
+
+  const pplRoutines = splitRoutines.filter((routine) => routine.category === 'Push / Pull / Legs');
+  const lastTitle = lastSplitWorkout?.title.toLowerCase() ?? '';
   const nextFocus = lastTitle.includes('push') ? 'pull' : lastTitle.includes('pull') ? 'legs' : lastTitle.includes('legs') ? 'push' : 'push';
   const nextPplRoutine = pplRoutines.find((routine) => routine.title.toLowerCase().includes(nextFocus)) ?? pplRoutines[0];
-  const useArnoldSplit = !!activeRoutine?.title.toLowerCase().includes('arnold split') || (!activeWorkout && !!lastArnoldWorkout);
-  const nextRoutine = activeRoutine ?? (useArnoldSplit ? nextArnoldRoutine : nextPplRoutine) ?? routines[0];
+  const nextRoutine = activeRoutine ?? (
+    selectedSplit === 'Arnold Split'
+      ? nextArnoldRoutine ?? nextSplitRoutine
+      : selectedSplit === 'Push / Pull / Legs'
+        ? nextPplRoutine ?? nextSplitRoutine
+        : nextSplitRoutine
+  ) ?? routines[0];
+  const nextSessionLabel = selectedSplit === 'Push / Pull / Legs'
+    ? `${nextFocus} day`
+    : selectedSplit;
   const sortedWeights = useMemo(
     () => [...bodyWeights].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [bodyWeights]
@@ -151,7 +243,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </section>
       ) : nextRoutine ? (
         <section className="rounded-2xl border border-emerald-800/60 bg-gradient-to-br from-emerald-950/40 via-neutral-900 to-neutral-900 p-3.5">
-          <div className="flex items-center gap-2"><span className="rounded-md bg-emerald-900/70 px-2 py-1 text-[8px] font-bold tracking-[.1em] uppercase text-emerald-200">Next session</span><span className="text-[9px] font-semibold tracking-[.08em] uppercase text-neutral-400">{nextFocus} day</span></div>
+          <div className="flex items-center gap-2"><span className="rounded-md bg-emerald-900/70 px-2 py-1 text-[8px] font-bold tracking-[.1em] uppercase text-emerald-200">Next session</span><span className="text-[9px] font-semibold tracking-[.08em] uppercase text-neutral-400">{nextSessionLabel}</span></div>
           <h3 className="mt-2 text-lg leading-tight font-bold text-white">{nextRoutine.title}</h3>
           <p className="mt-1 text-[11px] text-neutral-300 line-clamp-2">{nextRoutine.description}</p>
           <div className="mt-3 flex items-center justify-between gap-2"><span className="text-[10px] text-neutral-400">{nextRoutine.exercises.length} exercises · {nextRoutine.estimatedMinutes} min</span><button onClick={() => onStartRoutine(nextRoutine)} className="rounded-xl bg-emerald-500 px-3.5 py-2.5 text-xs font-bold text-neutral-950 hover:bg-emerald-400 active:scale-[.98] transition">Start workout <span aria-hidden="true">›</span></button></div>

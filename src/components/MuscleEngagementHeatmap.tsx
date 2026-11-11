@@ -138,6 +138,30 @@ const MAP_GROUP_TO_MUSCLE: Partial<Record<MuscleGroup, MuscleKey>> = {
   ABDUCTORS: 'Glutes',
 };
 
+const ANTERIOR_MAP_GROUPS: ReadonlySet<MuscleGroup> = new Set([
+  'CHEST', 'SHOULDERS_FRONT', 'BICEPS', 'CORE', 'OBLIQUES', 'QUADS', 'ADDUCTORS'
+]);
+const POSTERIOR_MAP_GROUPS: ReadonlySet<MuscleGroup> = new Set([
+  'BACK_UPPER', 'BACK_LOWER', 'TRAPEZIUS', 'RHOMBOIDS', 'LATS',
+  'SHOULDERS_REAR', 'TRICEPS', 'GLUTES', 'HAMSTRINGS'
+]);
+
+type MuscleMapView = 'both' | 'front' | 'back';
+
+const viewForMapGroups = (groups: MuscleGroup[]): MuscleMapView => {
+  const hasAnterior = groups.some((group) => ANTERIOR_MAP_GROUPS.has(group));
+  const hasPosterior = groups.some((group) => POSTERIOR_MAP_GROUPS.has(group));
+  if (hasAnterior === hasPosterior) return 'both';
+  return hasAnterior ? 'front' : 'back';
+};
+
+const viewForMuscle = (muscle: MuscleKey): MuscleMapView => {
+  const groups = Object.entries(MAP_GROUP_TO_MUSCLE)
+    .filter(([, mappedMuscle]) => mappedMuscle === muscle)
+    .map(([group]) => group as MuscleGroup);
+  return viewForMapGroups(groups);
+};
+
 const mapAnatomyName = (name: string): MuscleGroup[] => {
   const value = name.toLowerCase();
   if (value.includes('pectoral') || value.includes('chest')) return ['CHEST'];
@@ -173,7 +197,13 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>('Chest');
   const [hoveredMuscle, setHoveredMuscle] = useState<MuscleKey | null>(null);
   const [activeSplitFilter, setActiveSplitFilter] = useState<'All' | 'Push' | 'Pull' | 'Legs' | 'Core'>('All');
-  const [viewOrientation, setViewOrientation] = useState<'both' | 'front' | 'back'>('both');
+  const [viewOrientation, setViewOrientation] = useState<MuscleMapView>(() => viewForMuscle('Chest'));
+
+  const selectMuscle = (muscle: MuscleKey, view: MuscleMapView = viewForMuscle(muscle)) => {
+    setSelectedMuscle(muscle);
+    setViewOrientation(view);
+    setHoveredMuscle(null);
+  };
 
   const selectedWorkouts = useMemo(() => {
     const now = new Date();
@@ -455,10 +485,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               figureWidth={220}
               onSelectMuscle={({ group }) => {
                 const muscle = MAP_GROUP_TO_MUSCLE[group];
-                if (muscle) {
-                  setSelectedMuscle(muscle);
-                  setHoveredMuscle(null);
-                }
+                if (muscle) selectMuscle(muscle, viewForMapGroups([group]));
               }}
               className={`muscle-map-figures ${viewOrientation === 'both' ? 'paired-view' : 'single-view'}`}
               style={{ width: '100%' }}
@@ -623,7 +650,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
             return (
               <div
                 key={muscle.key}
-                onClick={() => setSelectedMuscle(muscle.key)}
+                onClick={() => selectMuscle(muscle.key)}
                 onMouseEnter={() => setHoveredMuscle(muscle.key)}
                 onMouseLeave={() => setHoveredMuscle(null)}
                 className={`p-3 rounded-2xl border transition cursor-pointer flex flex-col justify-between gap-2 group ${
