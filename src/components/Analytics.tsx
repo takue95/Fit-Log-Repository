@@ -258,148 +258,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         </button>
       </div>
 
-      {/* 1RM Progression Interactive Chart */}
-      <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-2xl flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                1RM Strength Curve
-              </span>
-              {growthPercent !== null && (
-                <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-fitlog-gold/10 text-fitlog-gold border-fitlog-gold/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
-                  {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% in range
-                </span>
-              )}
-            </div>
-            <h3 className="text-lg font-bold text-white mt-0.5">
-              Estimated One Rep Max
-            </h3>
-          </div>
-
-          {/* Exercise Picker */}
-          <select
-            value={selectedPRCompound}
-            onChange={(e) => setSelectedPRCompound(e.target.value)}
-            className="bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-neutral-200 focus:outline-none focus:border-emerald-500"
-          >
-            {trackedCompounds.map((tc) => (
-              <option key={tc.id} value={tc.id}>
-                {tc.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[10px] text-neutral-500">Best estimated 1RM per month</span>
-          <div className="grid grid-cols-4 rounded-xl border border-neutral-800 bg-neutral-950 p-1" aria-label="Chart date range">
-            {(['3M', '6M', '12M', 'All'] as const).map((range) => (
-              <button
-                key={range}
-                type="button"
-                onClick={() => setProgressionRange(range)}
-                aria-pressed={progressionRange === range}
-                className={`min-w-10 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${progressionRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* SVG Curve */}
-        {progressionData.length ? <div className="relative w-full overflow-hidden bg-neutral-950/60 rounded-2xl p-2 border border-neutral-800/80">
-          <svg
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="w-full h-44 overflow-visible"
-            role="img"
-            aria-label={`${trackedCompounds.find((compound) => compound.id === selectedPRCompound)?.name ?? 'Strength'} estimated one rep max trend, ${progressionRange} range`}
-          >
-            <defs>
-              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#71b593" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#71b593" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Grid lines */}
-            {[0, 0.5, 1].map((fraction) => {
-              const y = chartHeight - paddingY - fraction * (chartHeight - paddingY * 2);
-              const value = minVal + fraction * (maxVal - minVal);
-              return (
-                <g key={fraction}>
-                  <line x1={paddingX} y1={y} x2={rightX} y2={y} stroke="#262626" strokeDasharray="4 4" strokeWidth="1" />
-                  <text x={paddingX - 7} y={y + 3} textAnchor="end" fill="#737373" fontSize="9" fontFamily="monospace">{Math.round(value)}</text>
-                </g>
-              );
-            })}
-
-            {/* Area fill */}
-            {progressionData.length > 1 && (
-              <polygon
-                points={`${paddingX},${chartHeight - paddingY} ${pointsString} ${rightX},${chartHeight - paddingY}`}
-                fill="url(#chartGradient)"
-              />
-            )}
-
-            {progressionData.length > 1 && <polyline fill="none" stroke="#71b593" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pointsString} />}
-
-            {progressionData.map((point, index) => {
-              const isLast = index === progressionData.length - 1;
-              const isSelected = point.dateISO === activeProgressPoint?.dateISO;
-              const pointLabel = `${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM from ${point.maxWeight} ${settings.weightUnit} × ${point.reps} reps`;
-              return (
-                <g key={point.dateISO}>
-                  <circle
-                    cx={dateToX(point.dateISO)}
-                    cy={dateToY(point.estimated1RM)}
-                    r={isSelected ? 6 : isLast ? 4.5 : 3.5}
-                    fill={isSelected ? '#e8d7ac' : isLast ? '#d8b36a' : '#71b593'}
-                    stroke={isSelected ? '#d8b36a' : '#0a0a0a'}
-                    strokeWidth={isSelected ? 3 : 2}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={pointLabel}
-                    onClick={() => setSelectedProgressPoint(point.dateISO)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setSelectedProgressPoint(point.dateISO);
-                      }
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  ><title>{pointLabel}</title></circle>
-                </g>
-              );
-            })}
-            {rangeWindow && [0, 0.5, 1].map((fraction) => {
-              const start = rangeWindow.start.getTime();
-              const end = rangeWindow.end.getTime() - 1;
-              const date = new Date(start + (end - start) * fraction);
-              const x = paddingX + fraction * (rightX - paddingX);
-              return <text key={fraction} x={x} y={chartHeight - 5} textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'} fill="#737373" fontSize="9">{formatAxisDate(date)}</text>;
-            })}
-          </svg>
-        </div> : (
-          <div className="flex min-h-44 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-950/50 px-6 text-center text-xs text-neutral-500">
-            No logged sets for this lift yet. Your strength curve will start when it appears in a completed workout.
-          </div>
-        )}
-
-        {/* Current Stat highlight */}
-        {activeProgressPoint && <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs">
-          <span className="min-w-0 text-neutral-400">
-            <span className="block text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{activeProgressPoint.dateISO === progressionData[progressionData.length - 1]?.dateISO ? 'Latest month' : 'Selected month'}</span>
-            <span className="font-bold text-white">{activeProgressPoint.maxWeight} {settings.weightUnit} × {activeProgressPoint.reps} reps</span>
-            <span className="ml-1.5 text-neutral-500">{new Date(activeProgressPoint.dateISO).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
-          </span>
-          <span className="shrink-0 font-mono font-bold text-emerald-400">
-            Est. 1RM: {Math.round(activeProgressPoint.estimated1RM)} {settings.weightUnit}
-          </span>
-        </div>}
-      </div>
-
       {/* Muscle Engagement Heat Map (7-Day Biometrics) */}
       <MuscleEngagementHeatmap
         history={history}
@@ -607,6 +465,148 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           ))}
         </div>
       </div>
+      {/* 1RM Progression Interactive Chart */}
+      <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-2xl flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                1RM Strength Curve
+              </span>
+              {growthPercent !== null && (
+                <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-fitlog-gold/10 text-fitlog-gold border-fitlog-gold/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
+                  {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% in range
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-white mt-0.5">
+              Estimated One Rep Max
+            </h3>
+          </div>
+
+          {/* Exercise Picker */}
+          <select
+            value={selectedPRCompound}
+            onChange={(e) => setSelectedPRCompound(e.target.value)}
+            className="bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-neutral-200 focus:outline-none focus:border-emerald-500"
+          >
+            {trackedCompounds.map((tc) => (
+              <option key={tc.id} value={tc.id}>
+                {tc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[10px] text-neutral-500">Best estimated 1RM per month</span>
+          <div className="grid grid-cols-4 rounded-xl border border-neutral-800 bg-neutral-950 p-1" aria-label="Chart date range">
+            {(['3M', '6M', '12M', 'All'] as const).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => setProgressionRange(range)}
+                aria-pressed={progressionRange === range}
+                className={`min-w-10 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${progressionRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* SVG Curve */}
+        {progressionData.length ? <div className="relative w-full overflow-hidden bg-neutral-950/60 rounded-2xl p-2 border border-neutral-800/80">
+          <svg
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            className="w-full h-44 overflow-visible"
+            role="img"
+            aria-label={`${trackedCompounds.find((compound) => compound.id === selectedPRCompound)?.name ?? 'Strength'} estimated one rep max trend, ${progressionRange} range`}
+          >
+            <defs>
+              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#71b593" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#71b593" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Grid lines */}
+            {[0, 0.5, 1].map((fraction) => {
+              const y = chartHeight - paddingY - fraction * (chartHeight - paddingY * 2);
+              const value = minVal + fraction * (maxVal - minVal);
+              return (
+                <g key={fraction}>
+                  <line x1={paddingX} y1={y} x2={rightX} y2={y} stroke="#262626" strokeDasharray="4 4" strokeWidth="1" />
+                  <text x={paddingX - 7} y={y + 3} textAnchor="end" fill="#737373" fontSize="9" fontFamily="monospace">{Math.round(value)}</text>
+                </g>
+              );
+            })}
+
+            {/* Area fill */}
+            {progressionData.length > 1 && (
+              <polygon
+                points={`${paddingX},${chartHeight - paddingY} ${pointsString} ${rightX},${chartHeight - paddingY}`}
+                fill="url(#chartGradient)"
+              />
+            )}
+
+            {progressionData.length > 1 && <polyline fill="none" stroke="#71b593" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pointsString} />}
+
+            {progressionData.map((point, index) => {
+              const isLast = index === progressionData.length - 1;
+              const isSelected = point.dateISO === activeProgressPoint?.dateISO;
+              const pointLabel = `${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM from ${point.maxWeight} ${settings.weightUnit} × ${point.reps} reps`;
+              return (
+                <g key={point.dateISO}>
+                  <circle
+                    cx={dateToX(point.dateISO)}
+                    cy={dateToY(point.estimated1RM)}
+                    r={isSelected ? 6 : isLast ? 4.5 : 3.5}
+                    fill={isSelected ? '#e8d7ac' : isLast ? '#d8b36a' : '#71b593'}
+                    stroke={isSelected ? '#d8b36a' : '#0a0a0a'}
+                    strokeWidth={isSelected ? 3 : 2}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={pointLabel}
+                    onClick={() => setSelectedProgressPoint(point.dateISO)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedProgressPoint(point.dateISO);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  ><title>{pointLabel}</title></circle>
+                </g>
+              );
+            })}
+            {rangeWindow && [0, 0.5, 1].map((fraction) => {
+              const start = rangeWindow.start.getTime();
+              const end = rangeWindow.end.getTime() - 1;
+              const date = new Date(start + (end - start) * fraction);
+              const x = paddingX + fraction * (rightX - paddingX);
+              return <text key={fraction} x={x} y={chartHeight - 5} textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'} fill="#737373" fontSize="9">{formatAxisDate(date)}</text>;
+            })}
+          </svg>
+        </div> : (
+          <div className="flex min-h-44 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-950/50 px-6 text-center text-xs text-neutral-500">
+            No logged sets for this lift yet. Your strength curve will start when it appears in a completed workout.
+          </div>
+        )}
+
+        {/* Current Stat highlight */}
+        {activeProgressPoint && <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs">
+          <span className="min-w-0 text-neutral-400">
+            <span className="block text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{activeProgressPoint.dateISO === progressionData[progressionData.length - 1]?.dateISO ? 'Latest month' : 'Selected month'}</span>
+            <span className="font-bold text-white">{activeProgressPoint.maxWeight} {settings.weightUnit} × {activeProgressPoint.reps} reps</span>
+            <span className="ml-1.5 text-neutral-500">{new Date(activeProgressPoint.dateISO).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+          </span>
+          <span className="shrink-0 font-mono font-bold text-emerald-400">
+            Est. 1RM: {Math.round(activeProgressPoint.estimated1RM)} {settings.weightUnit}
+          </span>
+        </div>}
+      </div>
+
     </div>
   );
 };
