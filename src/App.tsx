@@ -82,8 +82,9 @@ export default function App() {
     try {
       const parsed = JSON.parse(saved);
       if (!Array.isArray(parsed)) return [];
-      // Drop the original sample workouts for existing installs while preserving imported logs.
-      return parsed.filter((workout) => !/^history-\d+$/.test(workout?.id ?? ''));
+      // Remove only the short IDs used by the original demo. Real workout IDs may also
+      // start with "history-" but include a timestamp and must be preserved.
+      return parsed.filter((workout) => !/^history-\d{1,2}$/.test(workout?.id ?? ''));
     } catch {
       return [];
     }
@@ -312,7 +313,7 @@ export default function App() {
     }
 
     const completedEntry: CompletedWorkout = {
-      id: `history-${Date.now()}`,
+      id: `workout-log-${Date.now()}`,
       title: activeWorkout.title,
       date: new Date().toISOString(),
       durationMinutes,
@@ -323,7 +324,17 @@ export default function App() {
       prsAchieved
     };
 
-    setHistory((prev) => [completedEntry, ...prev]);
+    const nextHistory = [completedEntry, ...history];
+    try {
+      // Write the log before closing the active workout so iPhone storage errors cannot
+      // silently discard the session.
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(nextHistory));
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_WORKOUT);
+    } catch {
+      window.alert('FitLog could not save this workout on this device. Your workout is still open; please export a backup or free device storage, then try Finish & Save again.');
+      return;
+    }
+    setHistory(nextHistory);
     setActiveWorkout(null);
     setActiveRestTimer(null);
     setCompletedWorkoutSummary(completedEntry);
