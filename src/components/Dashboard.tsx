@@ -23,7 +23,6 @@ interface DashboardProps {
   onStartEmptyWorkout: () => void;
   onStartRoutine: (routine: RoutineTemplate) => void;
   onResumeActiveWorkout: () => void;
-  onNavigateToRoutines: () => void;
   onNavigateToAnalytics: () => void;
   onNavigateToHistory: () => void;
   onAddBodyWeight: (weight: number, date: string) => void;
@@ -42,7 +41,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onStartEmptyWorkout,
   onStartRoutine,
   onResumeActiveWorkout,
-  onNavigateToRoutines,
   onNavigateToAnalytics,
   onNavigateToHistory,
   onAddBodyWeight,
@@ -96,9 +94,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const nextPplRoutine = pplRoutines.find((routine) => routine.title.toLowerCase().includes(nextFocus)) ?? pplRoutines[0];
   const useArnoldSplit = !!activeRoutine?.title.toLowerCase().includes('arnold split') || (!activeWorkout && !!lastArnoldWorkout);
   const nextRoutine = activeRoutine ?? (useArnoldSplit ? nextArnoldRoutine : nextPplRoutine) ?? routines[0];
-  const splitLabel = activeRoutine?.title.split(' · ')[0]
-    ?? (useArnoldSplit ? 'Arnold Split' : pplRoutines.length ? 'Push · Pull · Legs' : nextRoutine?.category ?? 'Training plan');
-
   const sortedWeights = useMemo(
     () => [...bodyWeights].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [bodyWeights]
@@ -147,11 +142,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           One good session at a time.
         </p>
       </section>
-
-      <button onClick={onNavigateToRoutines} className="w-full flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-3 text-left active:scale-[.99] transition">
-        <span><span className="block text-[9px] font-bold tracking-[.12em] uppercase text-neutral-400">Your training split</span><span className="block mt-1 text-sm font-bold text-white">{splitLabel}</span><span className="block mt-0.5 text-[10px] text-neutral-400">Choose and manage your routines</span></span>
-        <ChevronRight className="w-4 h-4 text-neutral-500" />
-      </button>
 
       {activeWorkout ? (
         <section className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-neutral-900 p-3.5">
