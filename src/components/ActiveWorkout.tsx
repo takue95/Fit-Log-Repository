@@ -40,10 +40,55 @@ import {
 } from '../utils/fitnessCalc';
 import { ExerciseSwapModal } from './modals/ExerciseSwapModal';
 import { NumericInput } from './NumericInput';
+import { MuscleMap } from '@musclemap/react';
+import type { MuscleGroup as MapMuscleGroup, MuscleMapValues } from '@musclemap/core';
+
+const CATEGORY_MUSCLE: Partial<Record<Exercise['category'], MapMuscleGroup>> = {
+  Chest: 'CHEST', Back: 'LATS', Shoulders: 'SHOULDERS_SIDE', Quads: 'QUADS',
+  Hamstrings: 'HAMSTRINGS', Glutes: 'GLUTES', Biceps: 'BICEPS', Forearms: 'FOREARMS',
+  Triceps: 'TRICEPS', Core: 'CORE', Calves: 'CALVES'
+};
+
+function mapMuscleName(name: string): MapMuscleGroup[] {
+  const value = name.toLowerCase();
+  if (value.includes('pectoral') || value.includes('chest')) return ['CHEST'];
+  if (value.includes('trapez') || value.includes('trap')) return ['TRAPEZIUS'];
+  if (value.includes('rhomboid') || value.includes('mid back') || value.includes('upper back')) return ['RHOMBOIDS'];
+  if (value.includes('rear delt') || value.includes('posterior delt') || value.includes('rear deltoid')) return ['SHOULDERS_REAR'];
+  if (value.includes('front delt') || value.includes('anterior delt') || value.includes('front deltoid')) return ['SHOULDERS_FRONT'];
+  if (value.includes('side delt') || value.includes('lateral delt') || value.includes('side deltoid')) return ['SHOULDERS_SIDE'];
+  if (value.includes('tricep')) return ['TRICEPS'];
+  if (value.includes('bicep') || value.includes('brachialis')) return ['BICEPS'];
+  if (value.includes('forearm') || value.includes('grip')) return ['FOREARMS'];
+  if (value.includes('shoulder') || value.includes('deltoid') || value.includes('delt')) return ['SHOULDERS_SIDE'];
+  if (value.includes('latissimus') || value.includes('lats')) return ['LATS'];
+  if (value.includes('lower back') || value.includes('erector')) return ['BACK_LOWER'];
+  if (value.includes('oblique')) return ['OBLIQUES'];
+  if (value.includes('abdominal') || value.includes('abs') || value.includes('core')) return ['CORE'];
+  if (value.includes('glute')) return ['GLUTES'];
+  if (value.includes('quad')) return ['QUADS'];
+  if (value.includes('hamstring')) return ['HAMSTRINGS'];
+  if (value.includes('calf') || value.includes('gastrocnemius') || value.includes('soleus')) return ['CALVES'];
+  if (value.includes('adductor')) return ['ADDUCTORS'];
+  if (value.includes('abductor')) return ['ABDUCTORS'];
+  return [];
+}
+
+function getWorkoutMuscleValues(workout: ActiveWorkout, exercises: Exercise[]): MuscleMapValues {
+  const groups = new Set<MapMuscleGroup>();
+  workout.exercises.forEach((workoutExercise) => {
+    const exercise = exercises.find((item) => item.id === workoutExercise.exerciseId);
+    const primaryGroups = exercise?.primaryMuscles.flatMap(mapMuscleName) ?? [];
+    const fallback = CATEGORY_MUSCLE[workoutExercise.category];
+    (primaryGroups.length ? primaryGroups : fallback ? [fallback] : []).forEach((group) => groups.add(group));
+  });
+  return Object.fromEntries([...groups].map((group) => [group, { score: 100 }])) as MuscleMapValues;
+}
 
 interface ActiveWorkoutProps {
   workout: ActiveWorkout;
   settings: UserSettings;
+  routineDescription?: string;
   allExercises?: Exercise[];
   history?: CompletedWorkout[];
   onUpdateWorkout: (updater: (prev: ActiveWorkout) => ActiveWorkout) => void;
@@ -58,6 +103,7 @@ interface ActiveWorkoutProps {
 export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
   workout,
   settings,
+  routineDescription,
   allExercises = [],
   history = [],
   onUpdateWorkout,
@@ -88,6 +134,11 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
   // Rep options constant
   const standardRepOptions = useMemo(() => generateRepOptions(), []);
+  const workoutMuscleValues = useMemo(
+    () => getWorkoutMuscleValues(workout, allExercises),
+    [workout.exercises, allExercises]
+  );
+
 
   // Use elapsed wall time so iPhone backgrounding does not make the timer fall behind.
   useEffect(() => {
@@ -512,6 +563,37 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
           className="text-lg font-extrabold bg-transparent text-white border-b border-transparent hover:border-neutral-700 focus:border-emerald-500 focus:outline-none transition py-0.5"
           placeholder="Workout Title..."
         />
+        {routineDescription && (
+          <p className="text-xs leading-relaxed text-neutral-400">
+            {routineDescription}
+          </p>
+        )}
+        <div className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950/70 p-2.5">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+              Muscle focus
+            </span>
+            <span className="flex items-center gap-1.5 text-[10px] font-medium text-neutral-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Primary targets
+            </span>
+          </div>
+          <div className="workout-focus-map">
+            <MuscleMap
+              values={workoutMuscleValues}
+              sex="MALE"
+              view="BOTH"
+              monochromeColor="#39d98a"
+              monochromeBaseColor="#465148"
+              glow={false}
+              showLegend={false}
+              tooltipFields={[]}
+              figureWidth={136}
+              className="workout-focus-map-content muscle-focus-map muscle-map-figures paired-view"
+              style={{ width: '100%', justifyContent: 'center' }}
+            />
+          </div>
+        </div>
         <div className="flex items-center justify-between text-xs text-neutral-400">
           <span>Started {new Date(workout.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           <span className="text-emerald-400 font-medium">
