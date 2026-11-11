@@ -73,12 +73,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return { date, label: date.toLocaleDateString(undefined, { weekday: 'short' }), hasWorkout, isToday: date.getTime() === localToday.getTime() };
   });
 
+  const arnoldRoutines = routines
+    .filter((routine) => routine.title.toLowerCase().includes('arnold split'))
+    .sort((a, b) => {
+      const order = (title: string) => title.toLowerCase().includes('chest & back') ? 0 : title.toLowerCase().includes('legs') ? 1 : title.toLowerCase().includes('shoulders & arms') ? 2 : 3;
+      return order(a.title) - order(b.title);
+    });
+  const lastArnoldWorkout = recentHistory.find((workout) =>
+    workout.title.toLowerCase().includes('arnold split')
+  );
+  const activeRoutine = activeWorkout?.routineId
+    ? routines.find((routine) => routine.id === activeWorkout.routineId)
+    : undefined;
+  const lastArnoldIndex = arnoldRoutines.findIndex((routine) => routine.title === lastArnoldWorkout?.title);
+  const nextArnoldRoutine = lastArnoldIndex >= 0
+    ? arnoldRoutines[(lastArnoldIndex + 1) % arnoldRoutines.length]
+    : arnoldRoutines[0];
   const pplRoutines = routines.filter((routine) => routine.category === 'Push / Pull / Legs');
   const lastPplWorkout = recentHistory.find((workout) => pplRoutines.some((routine) => routine.title === workout.title));
   const lastTitle = lastPplWorkout?.title.toLowerCase() ?? '';
   const nextFocus = lastTitle.includes('push') ? 'pull' : lastTitle.includes('pull') ? 'legs' : lastTitle.includes('legs') ? 'push' : 'push';
-  const nextRoutine = pplRoutines.find((routine) => routine.title.toLowerCase().includes(nextFocus)) ?? pplRoutines[0] ?? routines[0];
-  const splitLabel = pplRoutines.length ? 'Push · Pull · Legs' : nextRoutine?.category ?? 'Training plan';
+  const nextPplRoutine = pplRoutines.find((routine) => routine.title.toLowerCase().includes(nextFocus)) ?? pplRoutines[0];
+  const useArnoldSplit = !!activeRoutine?.title.toLowerCase().includes('arnold split') || (!activeWorkout && !!lastArnoldWorkout);
+  const nextRoutine = activeRoutine ?? (useArnoldSplit ? nextArnoldRoutine : nextPplRoutine) ?? routines[0];
+  const splitLabel = activeRoutine?.title.split(' · ')[0]
+    ?? (useArnoldSplit ? 'Arnold Split' : pplRoutines.length ? 'Push · Pull · Legs' : nextRoutine?.category ?? 'Training plan');
 
   const sortedWeights = useMemo(
     () => [...bodyWeights].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
