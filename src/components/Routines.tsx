@@ -68,7 +68,6 @@ function getRoutineMuscleMap(routine: RoutineTemplate, exercises: Exercise[]) {
     const primaryGroups = exercise.primaryMuscles.flatMap(mapAnatomyToMuscles);
     const fallbackGroups = primaryGroups.length ? primaryGroups : [CATEGORY_MUSCLES[exercise.category]].filter(Boolean) as MapMuscleGroup[];
     fallbackGroups.forEach((group) => add(group, 60));
-    exercise.secondaryMuscles?.flatMap(mapAnatomyToMuscles).forEach((group) => add(group, 24));
   });
 
   const maximum = Math.max(1, ...scores.values());
@@ -85,9 +84,9 @@ function getRoutineMuscleMap(routine: RoutineTemplate, exercises: Exercise[]) {
   ]);
   const frontScore = [...scores].reduce((sum, [group, score]) => sum + (frontGroups.has(group) ? score : 0), 0);
   const backScore = [...scores].reduce((sum, [group, score]) => sum + (backGroups.has(group) ? score : 0), 0);
-  const view: 'FRONT' | 'BACK' | 'BOTH' = frontScore > backScore * 1.35
+  const view: 'FRONT' | 'BACK' | 'BOTH' = frontScore > backScore * 2.1
     ? 'FRONT'
-    : backScore > frontScore * 1.35
+    : backScore > frontScore * 2.1
       ? 'BACK'
       : 'BOTH';
 
@@ -98,7 +97,7 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
   const { values, view } = getRoutineMuscleMap(routine, exercises);
   return (
     <div
-      className="w-[92px] h-[96px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
+      className="w-[116px] h-[98px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
       role="img"
       aria-label={`Muscle focus for ${routine.title}`}
     >
@@ -106,18 +105,19 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
         values={values}
         sex="MALE"
         view={view}
-        monochromeColor="#d2aa55"
+        monochromeColor="#25b879"
         monochromeBaseColor="#465148"
         glow={false}
         showLegend={false}
         tooltipFields={[]}
-        figureWidth={view === 'BOTH' ? 66 : 82}
+        figureWidth={view === 'BOTH' ? 58 : 65}
         backgroundImageFront={maleFront}
         backgroundImageBack={maleBack}
         backgroundGrayscale
         backgroundBrightness={1.05}
         backgroundOpacity={0.45}
-        style={{ width: '100%', height: '100%' }}
+        className="routine-muscle-map muscle-map-figures paired-view"
+        style={{ width: '100%', height: '100%', justifyContent: 'center' }}
       />
     </div>
   );
