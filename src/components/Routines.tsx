@@ -167,6 +167,15 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     }
   });
   const [splitView, setSplitView] = useState<'current' | 'browse'>('current');
+  const [browsedSplit, setBrowsedSplit] = useState<string>(() => {
+    const inferred = inferCurrentSplit(routines, history, activeWorkout);
+    try {
+      const saved = localStorage.getItem(SPLIT_PREFERENCE_KEY);
+      return saved && routines.some((routine) => splitNameForRoutine(routine) === saved) ? saved : inferred;
+    } catch {
+      return inferred;
+    }
+  });
   const [isCreatingRoutine, setIsCreatingRoutine] = useState<boolean>(false);
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null);
 
@@ -199,7 +208,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     });
   const visibleRoutines = splitView === 'current'
     ? currentSplitRoutines
-    : routines.filter((routine) => splitNameForRoutine(routine) === selectedSplit);
+    : routines.filter((routine) => splitNameForRoutine(routine) === browsedSplit);
 
   const handleAddExerciseToRoutine = (exId: string) => {
     setSelectedExIds((prev) => [
@@ -262,7 +271,10 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
           Current Split
         </button>
         <button
-          onClick={() => setSplitView('browse')}
+          onClick={() => {
+            setBrowsedSplit(selectedSplit);
+            setSplitView('browse');
+          }}
           className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
             splitView === 'browse' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
           }`}
@@ -280,23 +292,47 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               <p className="mt-1 text-[11px] text-neutral-400">{currentSplitRoutines.length} workout{currentSplitRoutines.length === 1 ? '' : 's'} in this plan</p>
             </div>
             <button
-              onClick={() => setSplitView('browse')}
+              onClick={() => {
+                setBrowsedSplit(selectedSplit);
+                setSplitView('browse');
+              }}
               className="shrink-0 rounded-xl border border-emerald-800/70 bg-emerald-950/40 px-3 py-2 text-[11px] font-bold text-emerald-300 hover:bg-emerald-950/70"
             >
-              Change split
+              Browse splits
             </button>
           </div>
         </section>
       ) : (
         <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
-          <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">Choose a training split</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-300">Browse splits · preview only</p>
+              <p className="mt-1 px-1 text-[10px] text-neutral-500">Your current split stays {selectedSplit} until you choose to change it.</p>
+            </div>
+            {browsedSplit !== selectedSplit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSplit(browsedSplit);
+                  setSplitView('current');
+                }}
+                className="shrink-0 rounded-xl bg-emerald-500 px-3 py-2 text-[10px] font-bold text-neutral-950 shadow-lg shadow-emerald-500/15 transition hover:bg-emerald-400"
+              >
+                Change to this split
+              </button>
+            ) : (
+              <span className="shrink-0 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-3 py-2 text-[10px] font-bold text-emerald-300">Current split</span>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
             {splitOptions.map((split) => (
               <button
                 key={split}
-                onClick={() => setSelectedSplit(split)}
+                type="button"
+                aria-pressed={browsedSplit === split}
+                onClick={() => setBrowsedSplit(split)}
                 className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                  selectedSplit === split
+                  browsedSplit === split
                     ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300'
                     : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white'
                 }`}
