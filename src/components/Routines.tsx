@@ -14,6 +14,118 @@ import {
 } from 'lucide-react';
 import { RoutineTemplate, Exercise } from '../types/fitness';
 import { NumericInput } from './NumericInput';
+import { MuscleMap } from '@musclemap/react';
+import type { MuscleGroup as MapMuscleGroup, MuscleMapRegion, MuscleMapValues } from '@musclemap/core';
+import maleFront from '@musclemap/assets/bodies/male-front.webp';
+import maleBack from '@musclemap/assets/bodies/male-back.webp';
+
+const CATEGORY_MUSCLES: Partial<Record<Exercise['category'], MapMuscleGroup>> = {
+  Chest: 'CHEST',
+  Back: 'LATS',
+  Shoulders: 'SHOULDERS_SIDE',
+  Quads: 'QUADS',
+  Hamstrings: 'HAMSTRINGS',
+  Glutes: 'GLUTES',
+  Biceps: 'BICEPS',
+  Forearms: 'FOREARMS',
+  Triceps: 'TRICEPS',
+  Core: 'CORE',
+  Calves: 'CALVES'
+};
+
+const UPPER_MUSCLES = new Set<MapMuscleGroup>([
+  'CHEST', 'LATS', 'TRAPEZIUS', 'RHOMBOIDS', 'SHOULDERS_FRONT', 'SHOULDERS_SIDE',
+  'SHOULDERS_REAR', 'BICEPS', 'TRICEPS', 'FOREARMS'
+]);
+const LOWER_MUSCLES = new Set<MapMuscleGroup>([
+  'GLUTES', 'QUADS', 'HAMSTRINGS', 'CALVES', 'ADDUCTORS', 'ABDUCTORS'
+]);
+
+function mapAnatomyToMuscles(name: string): MapMuscleGroup[] {
+  const value = name.toLowerCase();
+  if (value.includes('pectoral') || value.includes('chest')) return ['CHEST'];
+  if (value.includes('trapez') || value.includes('trap')) return ['TRAPEZIUS'];
+  if (value.includes('rhomboid') || value.includes('mid back') || value.includes('upper back')) return ['RHOMBOIDS'];
+  if (value.includes('lat')) return ['LATS'];
+  if (value.includes('lower back') || value.includes('erector')) return ['BACK_LOWER'];
+  if (value.includes('rear delt') || value.includes('posterior delt') || value.includes('rear deltoid')) return ['SHOULDERS_REAR'];
+  if (value.includes('front delt') || value.includes('anterior delt') || value.includes('front deltoid')) return ['SHOULDERS_FRONT'];
+  if (value.includes('side delt') || value.includes('lateral delt') || value.includes('side deltoid')) return ['SHOULDERS_SIDE'];
+  if (value.includes('shoulder') || value.includes('deltoid') || value.includes('delt')) return ['SHOULDERS_SIDE'];
+  if (value.includes('bicep') || value.includes('brachialis')) return ['BICEPS'];
+  if (value.includes('tricep')) return ['TRICEPS'];
+  if (value.includes('forearm') || value.includes('grip')) return ['FOREARMS'];
+  if (value.includes('oblique')) return ['OBLIQUES'];
+  if (value.includes('abdominal') || value.includes('abs') || value.includes('core')) return ['CORE'];
+  if (value.includes('glute')) return ['GLUTES'];
+  if (value.includes('quad')) return ['QUADS'];
+  if (value.includes('hamstring')) return ['HAMSTRINGS'];
+  if (value.includes('calf') || value.includes('gastrocnemius') || value.includes('soleus')) return ['CALVES'];
+  if (value.includes('adductor')) return ['ADDUCTORS'];
+  if (value.includes('abductor')) return ['ABDUCTORS'];
+  return [];
+}
+
+function getRoutineMuscleMap(routine: RoutineTemplate, exercises: Exercise[]) {
+  const scores = new Map<MapMuscleGroup, number>();
+  const add = (group: MapMuscleGroup, points: number) => scores.set(group, (scores.get(group) || 0) + points);
+
+  routine.exercises.forEach((routineExercise) => {
+    const exercise = exercises.find((item) => item.id === routineExercise.exerciseId);
+    if (!exercise) return;
+    const primaryGroups = exercise.primaryMuscles.flatMap(mapAnatomyToMuscles);
+    const fallbackGroups = primaryGroups.length ? primaryGroups : [CATEGORY_MUSCLES[exercise.category]].filter(Boolean) as MapMuscleGroup[];
+    fallbackGroups.forEach((group) => add(group, 60));
+    exercise.secondaryMuscles?.flatMap(mapAnatomyToMuscles).forEach((group) => add(group, 24));
+  });
+
+  const maximum = Math.max(1, ...scores.values());
+  const values = Object.fromEntries(
+    [...scores.entries()].map(([group, score]) => [group, { score: Math.max(28, Math.round((score / maximum) * 100)) }])
+  ) as MuscleMapValues;
+  const groups = [...scores.keys()];
+  const hasUpper = groups.some((group) => UPPER_MUSCLES.has(group));
+  const hasLower = groups.some((group) => LOWER_MUSCLES.has(group));
+  const region: MuscleMapRegion | undefined = hasUpper && !hasLower
+    ? 'UPPER_BODY'
+    : hasLower && !hasUpper
+      ? 'LOWER_BODY'
+      : undefined;
+
+  return { values, region };
+}
+
+const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Exercise[] }> = ({ routine, exercises }) => {
+  const { values, region } = getRoutineMuscleMap(routine, exercises);
+  return (
+    <div
+      className="w-[76px] h-[88px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
+      role="img"
+      aria-label={`Muscle focus for ${routine.title}`}
+    >
+      <MuscleMap
+        values={values}
+        sex="MALE"
+        view="BOTH"
+        region={region}
+        cropToRegion={Boolean(region)}
+        monochromeColor="#d2aa55"
+        monochromeBaseColor="#465148"
+        glow={false}
+        showLegend={false}
+        tooltipFields={[]}
+        figureWidth={38}
+        backgroundImageFront={maleFront}
+        backgroundImageBack={maleBack}
+        backgroundGrayscale
+        backgroundBrightness={1.05}
+        backgroundOpacity={0.45}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
+};
+
 
 interface RoutinesProps {
   routines: RoutineTemplate[];
@@ -126,33 +238,38 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
             className="group rounded-2xl bg-neutral-900 border border-neutral-800/90 hover:border-neutral-700 p-5 shadow-lg flex flex-col justify-between gap-4 transition"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-neutral-800 text-emerald-400 border border-neutral-700/80">
-                  {routine.category}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-400 font-mono flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-neutral-500" />
-                    ~{routine.estimatedMinutes}m
-                  </span>
-                  {routine.isCustom && (
-                    <button
-                      onClick={() => onDeleteRoutine(routine.id)}
-                      className="p-1 text-neutral-500 hover:text-red-400 rounded transition"
-                      title="Delete routine"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+              <div className="flex items-start gap-3">
+                <RoutineMuscleThumbnail routine={routine} exercises={exercises} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-neutral-800 text-emerald-400 border border-neutral-700/80">
+                      {routine.category}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-neutral-400 font-mono flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-neutral-500" />
+                        ~{routine.estimatedMinutes}m
+                      </span>
+                      {routine.isCustom && (
+                        <button
+                          onClick={() => onDeleteRoutine(routine.id)}
+                          className="p-1 text-neutral-500 hover:text-red-400 rounded transition"
+                          title="Delete routine"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition">
+                    {routine.title}
+                  </h3>
+                  <p className="text-xs text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
+                    {routine.description}
+                  </p>
                 </div>
               </div>
-
-              <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition">
-                {routine.title}
-              </h3>
-              <p className="text-xs text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
-                {routine.description}
-              </p>
 
               {/* Exercises tags */}
               <div className="flex flex-wrap gap-1.5 mt-3">
