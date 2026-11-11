@@ -95,7 +95,7 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
         showLegend={false}
         tooltipFields={[]}
         figureWidth={64}
-        className="routine-muscle-map muscle-map-figures paired-view"
+        className="routine-muscle-map muscle-focus-map muscle-map-figures paired-view"
         style={{ width: '100%', height: '100%', justifyContent: 'center' }}
       />
     </div>
