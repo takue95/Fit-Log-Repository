@@ -481,7 +481,6 @@ export default function App() {
               onStartEmptyWorkout={handleStartEmptyWorkout}
               onStartRoutine={handleStartRoutine}
               onResumeActiveWorkout={() => setCurrentScreen(2)}
-              onNavigateToRoutines={() => setCurrentScreen(1)}
               onNavigateToAnalytics={() => setCurrentScreen(3)}
               onNavigateToHistory={() => {
                 setHistoryInitialTab('history');
@@ -550,6 +549,8 @@ export default function App() {
             <RoutinesView
               routines={routines}
               exercises={exercises}
+              history={history}
+              activeWorkout={activeWorkout}
               onStartRoutine={handleStartRoutine}
               onSaveRoutine={handleSaveRoutine}
               onDeleteRoutine={handleDeleteRoutine}
