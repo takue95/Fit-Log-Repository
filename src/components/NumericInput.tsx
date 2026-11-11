@@ -34,8 +34,9 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.target.value;
-    if (!/^-?(?:\d+\.?\d*|\.\d*)?$/.test(next)) return;
+    const raw = event.target.value;
+    if (!/^-?(?:\d+[.,]?\d*|[.,]\d*)?$/.test(raw)) return;
+    const next = raw.replace(',', '.');
     setDraft(next);
 
     if (next === '' || next === '-' || next === '.' || next.endsWith('.')) return;
