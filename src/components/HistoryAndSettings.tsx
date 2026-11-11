@@ -19,7 +19,9 @@ import {
   Search,
   CheckCircle2,
   ExternalLink,
-  User
+  User,
+  Cloud,
+  RefreshCw
 } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings, MUSCLE_GROUPS } from '../types/fitness';
 import { NumericInput } from './NumericInput';
@@ -44,6 +46,13 @@ interface HistoryAndSettingsProps {
   onDeleteHistoryItem: (workoutId: string) => void;
   onExportData: () => void;
   onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  driveConfigured: boolean;
+  driveSyncStatus: 'setup-required' | 'disconnected' | 'connecting' | 'syncing' | 'synced' | 'error';
+  driveLastSyncedAt: string | null;
+  driveSyncMessage: string;
+  onConnectDrive: () => void;
+  onSyncDrive: () => void;
+  onDisconnectDrive: () => void;
 }
 
 export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
@@ -54,7 +63,14 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   onUpdateSettings,
   onDeleteHistoryItem,
   onExportData,
-  onImportData
+  onImportData,
+  driveConfigured,
+  driveSyncStatus,
+  driveLastSyncedAt,
+  driveSyncMessage,
+  onConnectDrive,
+  onSyncDrive,
+  onDisconnectDrive
 }) => {
   const [activeTab, setActiveTab] = useState<HistoryTab>(initialTab);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(() =>
@@ -661,6 +677,86 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                 }`}
               />
             </button>
+          </div>
+
+          {/* Private Google Drive Sync */}
+          <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-fitlog-gold/20 bg-fitlog-gold/10 text-fitlog-gold">
+                <Cloud className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-bold text-white">Private Google Drive Sync</h4>
+                <p className="mt-1 text-xs leading-relaxed text-neutral-400">
+                  Keep workouts and routines available on your iPhone and browser. FitLog only accesses its own private Drive folder.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 px-3 py-2.5 text-xs">
+              {driveSyncStatus === 'setup-required' && (
+                <p className="text-amber-200">One-time Google setup is still needed before FitLog can connect.</p>
+              )}
+              {driveSyncStatus === 'disconnected' && (
+                <p className="text-neutral-300">Connect this device to your Google account to sync FitLog.</p>
+              )}
+              {driveSyncStatus === 'connecting' && (
+                <p className="text-neutral-300">Connecting securely to Google Drive…</p>
+              )}
+              {driveSyncStatus === 'syncing' && (
+                <p className="text-emerald-300">Syncing your FitLog data…</p>
+              )}
+              {driveSyncStatus === 'synced' && (
+                <p className="text-emerald-300">Drive sync is connected on this device.</p>
+              )}
+              {driveSyncStatus === 'error' && (
+                <p className="text-rose-300">{driveSyncMessage || 'Drive sync needs attention. Please reconnect and try again.'}</p>
+              )}
+              {driveLastSyncedAt && (
+                <p className="mt-1 text-[10px] text-neutral-500">Last sync {new Date(driveLastSyncedAt).toLocaleString()}</p>
+              )}
+              {!driveConfigured && driveSyncStatus === 'setup-required' && (
+                <p className="mt-1 text-[10px] text-neutral-500">Your Google Drive stays private; FitLog will request access only to its own backup.</p>
+              )}
+            </div>
+
+            {driveConfigured ? (
+              driveSyncStatus === 'synced' || driveSyncStatus === 'syncing' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={onSyncDrive}
+                    disabled={driveSyncStatus === 'syncing'}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-950 py-2.5 px-3 text-xs font-bold text-white transition hover:border-emerald-500/50 disabled:opacity-50"
+                  >
+                    <RefreshCw className="h-4 w-4 text-emerald-400" />
+                    Sync now
+                  </button>
+                  <button
+                    onClick={onDisconnectDrive}
+                    className="rounded-xl border border-neutral-800 bg-neutral-950 py-2.5 px-3 text-xs font-semibold text-neutral-400 transition hover:text-white"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={onConnectDrive}
+                  disabled={driveSyncStatus === 'connecting'}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 px-4 text-xs font-extrabold text-neutral-950 transition hover:bg-emerald-400 disabled:opacity-60"
+                >
+                  <Cloud className="h-4 w-4" />
+                  {driveSyncStatus === 'connecting' ? 'Connecting…' : 'Connect Google Drive'}
+                </button>
+              )
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-xl border border-neutral-800 bg-neutral-950 py-2.5 px-4 text-xs font-semibold text-neutral-500"
+              >
+                Google connection setup pending
+              </button>
+            )}
           </div>
 
           {/* Data Export / Import */}
