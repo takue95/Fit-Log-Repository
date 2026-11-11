@@ -427,7 +427,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
     const y = historyMax === historyMin ? 48 : 88 - ((point.weight - historyMin) / (historyMax - historyMin)) * 72;
     return `${x},${y}`;
   }).join(' ');
-  const formatLiftNumber = (value: number) => Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
+  const formatLiftNumber = (value: number) => String(value);
 
   useEffect(() => {
     if (allPlannedSetsComplete) setShowFinishConfirm(true);
