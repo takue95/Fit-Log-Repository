@@ -87,6 +87,18 @@ input[type="number"] { -moz-appearance: textfield; }
   width: min(260px, 70vw);
 }
 
+.routine-muscle-map > div:first-child {
+  gap: 0 !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+}
+
+.routine-muscle-map > div:first-child > svg {
+  flex: 0 0 auto;
+  max-width: 50%;
+  height: auto;
+}
+
 /* iOS Safari zooms the page when a text control uses less than 16px text. Keep
    every text-entry control at the safe size, not only workout number fields. */
 @media (max-width: 639px) {
