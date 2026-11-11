@@ -249,13 +249,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           <p className="text-xs text-neutral-400">Progression curves, PR milestones, and volume</p>
         </div>
 
-        <button
-          onClick={onOpenOneRMCalc}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-neutral-500/50 text-neutral-400 text-xs font-bold transition"
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          1RM Calc
-        </button>
       </div>
 
       {/* Muscle Engagement Heat Map (7-Day Biometrics) */}
@@ -484,18 +477,27 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             </h3>
           </div>
 
-          {/* Exercise Picker */}
-          <select
-            value={selectedPRCompound}
-            onChange={(e) => setSelectedPRCompound(e.target.value)}
-            className="bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-neutral-200 focus:outline-none focus:border-emerald-500"
-          >
-            {trackedCompounds.map((tc) => (
-              <option key={tc.id} value={tc.id}>
-                {tc.name}
-              </option>
-            ))}
-          </select>
+          {/* Exercise picker and 1RM calculator */}
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <select
+              value={selectedPRCompound}
+              onChange={(e) => setSelectedPRCompound(e.target.value)}
+              className="min-w-0 flex-1 bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-neutral-200 focus:outline-none focus:border-emerald-500 sm:flex-none"
+            >
+              {trackedCompounds.map((tc) => (
+                <option key={tc.id} value={tc.id}>
+                  {tc.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={onOpenOneRMCalc}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-bold text-neutral-400 transition hover:border-neutral-500/50"
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              1RM Calc
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
