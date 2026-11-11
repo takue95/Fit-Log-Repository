@@ -81,7 +81,7 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
   const { values, view } = getRoutineMuscleMap(routine, exercises);
   return (
     <div
-      className="w-[116px] h-[98px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
+      className="w-[128px] h-[104px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
       role="img"
       aria-label={`Muscle focus for ${routine.title}`}
     >
@@ -89,12 +89,12 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
         values={values}
         sex="MALE"
         view={view}
-        monochromeColor="#25b879"
+        monochromeColor="#39d98a"
         monochromeBaseColor="#465148"
         glow={false}
         showLegend={false}
         tooltipFields={[]}
-        figureWidth={58}
+        figureWidth={64}
         className="routine-muscle-map muscle-map-figures paired-view"
         style={{ width: '100%', height: '100%', justifyContent: 'center' }}
       />
