@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Play, 
   Pause, 
@@ -18,7 +18,8 @@ import {
   Sparkles,
   Edit3,
   ListFilter,
-  CheckCircle2
+  CheckCircle2,
+  History as HistoryIcon
 } from 'lucide-react';
 import { 
   ActiveWorkout, 
@@ -69,7 +70,11 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 }) => {
   const [elapsed, setElapsed] = useState<number>(workout.durationSeconds || 0);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
+  const elapsedBaseRef = useRef<number>(workout.durationSeconds || 0);
+  const timerStartedAtRef = useRef<number>(Date.now());
   const [showCancelConfirm, setShowCancelConfirm] = useState<boolean>(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
+  const [historyExerciseId, setHistoryExerciseId] = useState<string | null>(null);
   const [activeMenuExerciseId, setActiveMenuExerciseId] = useState<string | null>(null);
   
   // Mid-workout exercise swapping
@@ -84,17 +89,22 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
   // Rep options constant
   const standardRepOptions = useMemo(() => generateRepOptions(), []);
 
-  // Live timer tick
+  // Use elapsed wall time so iPhone backgrounding does not make the timer fall behind.
   useEffect(() => {
     if (!isTimerRunning) return;
-    const interval = setInterval(() => {
-      setElapsed((prev) => {
-        const next = prev + 1;
-        onUpdateWorkout((w) => ({ ...w, durationSeconds: next }));
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+    const syncElapsed = () => {
+      const next = elapsedBaseRef.current + Math.floor((Date.now() - timerStartedAtRef.current) / 1000);
+      setElapsed(next);
+      onUpdateWorkout((current) =>
+        current.durationSeconds === next ? current : { ...current, durationSeconds: next }
+      );
+    };
+    const interval = window.setInterval(syncElapsed, 1000);
+    document.addEventListener('visibilitychange', syncElapsed);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', syncElapsed);
+    };
   }, [isTimerRunning, onUpdateWorkout]);
 
   // Check if an exercise has ever been recorded in history
@@ -391,6 +401,37 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
         .reduce((sSum, s) => sSum + s.weight * s.reps, 0),
     0
   );
+  const totalPlannedSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+  const allPlannedSetsComplete = totalPlannedSets > 0 && totalCompletedSets === totalPlannedSets;
+  const selectedHistoryExercise = workout.exercises.find((exercise) => exercise.id === historyExerciseId);
+  const selectedExerciseHistory = selectedHistoryExercise
+    ? history
+        .filter((entry) => entry.exercises.some((exercise) =>
+          exercise.exerciseId === selectedHistoryExercise.exerciseId ||
+          exercise.exerciseName.toLowerCase() === selectedHistoryExercise.exerciseName.toLowerCase()
+        ))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    : [];
+  const historyChartPoints = [...selectedExerciseHistory].reverse().map((entry) => {
+    const exercise = entry.exercises.find((item) =>
+      item.exerciseId === selectedHistoryExercise?.exerciseId ||
+      item.exerciseName.toLowerCase() === selectedHistoryExercise?.exerciseName.toLowerCase()
+    );
+    const bestWeight = Math.max(0, ...(exercise?.sets.filter((set) => set.completed).map((set) => set.weight) ?? []));
+    return { date: entry.date, weight: bestWeight };
+  }).filter((point) => point.weight > 0);
+  const historyMin = Math.min(...historyChartPoints.map((point) => point.weight));
+  const historyMax = Math.max(...historyChartPoints.map((point) => point.weight));
+  const historyPolyline = historyChartPoints.map((point, index) => {
+    const x = historyChartPoints.length === 1 ? 150 : 10 + (index / (historyChartPoints.length - 1)) * 280;
+    const y = historyMax === historyMin ? 48 : 88 - ((point.weight - historyMin) / (historyMax - historyMin)) * 72;
+    return `${x},${y}`;
+  }).join(' ');
+  const formatLiftNumber = (value: number) => Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
+
+  useEffect(() => {
+    if (allPlannedSetsComplete) setShowFinishConfirm(true);
+  }, [allPlannedSetsComplete]);
 
   return (
     <div className="flex flex-col gap-4 pb-12 animate-in fade-in duration-200">
@@ -398,8 +439,20 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
       <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-neutral-950/90 backdrop-blur-md border-b border-neutral-800 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsTimerRunning(!isTimerRunning)}
+            onClick={() => {
+              if (isTimerRunning) {
+                const next = elapsedBaseRef.current + Math.floor((Date.now() - timerStartedAtRef.current) / 1000);
+                elapsedBaseRef.current = next;
+                setElapsed(next);
+                onUpdateWorkout((current) => ({ ...current, durationSeconds: next }));
+                setIsTimerRunning(false);
+              } else {
+                timerStartedAtRef.current = Date.now();
+                setIsTimerRunning(true);
+              }
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 hover:bg-neutral-800 transition"
+            aria-label={isTimerRunning ? 'Pause workout timer' : 'Resume workout timer'}
           >
             {isTimerRunning ? (
               <Pause className="w-3.5 h-3.5 text-emerald-400" />
@@ -438,7 +491,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
           </button>
 
           <button
-            onClick={onFinishWorkout}
+            onClick={() => setShowFinishConfirm(true)}
             disabled={totalCompletedSets === 0}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-neutral-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition"
           >
@@ -527,13 +580,12 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      onStartRestTimer(exercise.restSeconds || settings.defaultRestSeconds, exercise.exerciseName)
-                    }
+                    onClick={() => setHistoryExerciseId(exercise.id)}
                     className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
-                    title="Start Rest Timer"
+                    title="View exercise history"
+                    aria-label={`View history for ${exercise.exerciseName}`}
                   >
-                    <Timer className="w-3.5 h-3.5 text-neutral-400" />
+                    <HistoryIcon className="w-3.5 h-3.5 text-emerald-400" />
                   </button>
 
                   <button
@@ -636,6 +688,15 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
+                      onClick={() => onStartRestTimer(exercise.restSeconds || settings.defaultRestSeconds, exercise.exerciseName)}
+                      className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold"
+                    >
+                      <Timer className="w-3.5 h-3.5" />
+                      Start Rest
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => {
                         setExerciseToSwap(exercise);
                         setActiveMenuExerciseId(null);
@@ -695,7 +756,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
                         <div className="relative h-7 w-[3.75rem] min-w-0 max-w-full justify-self-center overflow-hidden rounded-lg border border-neutral-700/80 bg-neutral-950 focus-within:border-emerald-500">
                           {isManualWeight ? (
-                            <NumericInput value={set.weight} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)} min={0} step={exercise.equipment === 'Dumbbell' ? 1 : 2.5} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass} />
+                            <NumericInput autoFocus value={set.weight} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'weight', value)} min={0} step={exercise.equipment === 'Dumbbell' ? 1 : 2.5} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass} />
                           ) : (
                             <select value={set.weight} onChange={(event) => { const value = event.target.value; if (value === '__custom__') toggleManualInput(set.id, 'weight'); else updateSetValue(exercise.id, set.id, 'weight', parseFloat(value) || 0); }} aria-label={`Set ${sIdx + 1} weight`} className={setControlClass}>
                               {!hasCurrentWeightInOptions && set.weight > 0 && <option value={set.weight}>{set.weight}</option>}
@@ -708,7 +769,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
 
                         <div className="relative h-7 w-[3.75rem] min-w-0 max-w-full justify-self-center overflow-hidden rounded-lg border border-neutral-700/80 bg-neutral-950 focus-within:border-emerald-500">
                           {isManualReps ? (
-                            <NumericInput value={set.reps} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))} min={1} step={1} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass} />
+                            <NumericInput autoFocus value={set.reps} onValueChange={(value) => updateSetValue(exercise.id, set.id, 'reps', Math.round(value))} min={1} step={1} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass} />
                           ) : (
                             <select value={set.reps} onChange={(event) => { const value = event.target.value; if (value === '__custom__') toggleManualInput(set.id, 'reps'); else updateSetValue(exercise.id, set.id, 'reps', parseInt(value) || 0); }} aria-label={`Set ${sIdx + 1} reps`} className={setControlClass}>
                               {!standardRepOptions.includes(set.reps) && set.reps > 0 && <option value={set.reps}>{set.reps}</option>}
@@ -765,6 +826,15 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
         })}
       </div>
 
+      <button
+        type="button"
+        onClick={() => setShowFinishConfirm(true)}
+        disabled={totalCompletedSets === 0}
+        className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-neutral-950 shadow-lg shadow-emerald-500/15 disabled:opacity-50"
+      >
+        {allPlannedSetsComplete ? 'All sets logged · Finish & Save' : 'Finish & Save Workout'}
+      </button>
+
       {/* Add Exercise CTA */}
       <button
         type="button"
@@ -783,6 +853,89 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
           onSelectSwap={handleExecuteSwap}
           onClose={() => setExerciseToSwap(null)}
         />
+      )}
+
+      {historyExerciseId && selectedHistoryExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[85vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-3xl border border-neutral-800 bg-neutral-900 p-5 text-neutral-100 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-neutral-800 pb-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Lift History</div>
+                <h3 className="mt-1 text-base font-bold text-white">{selectedHistoryExercise.exerciseName}</h3>
+                <p className="mt-1 text-xs text-neutral-400">Best weight recorded in each workout</p>
+              </div>
+              <button type="button" onClick={() => setHistoryExerciseId(null)} className="rounded-lg bg-neutral-800 p-2 text-neutral-300" aria-label="Close lift history">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {historyChartPoints.length > 1 && (
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-3">
+                <div className="mb-2 flex items-center justify-between text-[10px] text-neutral-400">
+                  <span>Best set by workout</span>
+                  <span className="font-mono text-emerald-300">{formatLiftNumber(historyMin)}–{formatLiftNumber(historyMax)} {settings.weightUnit}</span>
+                </div>
+                <svg viewBox="0 0 300 100" role="img" aria-label="Exercise best-weight progress chart" className="h-28 w-full overflow-visible">
+                  <line x1="10" y1="88" x2="290" y2="88" stroke="#29332d" strokeWidth="1" />
+                  <polyline points={historyPolyline} fill="none" stroke="#72b996" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  {historyPolyline.split(' ').map((point, index) => {
+                    const [cx, cy] = point.split(',');
+                    return <circle key={index} cx={cx} cy={cy} r="3" fill="#72b996" stroke="#0d100e" strokeWidth="1.5" />;
+                  })}
+                </svg>
+              </div>
+            )}
+
+            {selectedExerciseHistory.length === 0 ? (
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4 text-center text-xs text-neutral-400">No past lifts logged for this exercise yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {selectedExerciseHistory.map((entry) => {
+                  const loggedExercise = entry.exercises.find((item) =>
+                    item.exerciseId === selectedHistoryExercise.exerciseId ||
+                    item.exerciseName.toLowerCase() === selectedHistoryExercise.exerciseName.toLowerCase()
+                  );
+                  if (!loggedExercise) return null;
+                  const loggedSets = loggedExercise.sets.filter((set) => set.completed);
+                  return (
+                    <div key={entry.id} className="rounded-2xl border border-neutral-800 bg-neutral-950 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <strong className="text-xs text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong>
+                        <span className="text-[10px] text-neutral-400">{entry.title}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {loggedSets.map((set) => (
+                          <span key={set.id} className="rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1 font-mono text-[10px] text-neutral-200">
+                            Set {set.setNumber} · {formatLiftNumber(set.weight)} {settings.weightUnit} × {set.reps}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Finish Workout Confirmation Modal */}
+      {showFinishConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-neutral-800 bg-neutral-900 p-5 text-neutral-100 shadow-2xl">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-400">Workout complete</div>
+            <h4 className="text-base font-bold text-white">Finish and save this workout?</h4>
+            <p className="mt-2 text-xs leading-relaxed text-neutral-400">
+              {allPlannedSetsComplete
+                ? 'All planned sets are logged. FitLog will save this workout to your history.'
+                : `${totalCompletedSets} completed sets will be saved. Unfinished sets will not be added to your history.`}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowFinishConfirm(false)} className="rounded-xl px-3 py-2 text-xs font-semibold text-neutral-400">Keep lifting</button>
+              <button type="button" onClick={onFinishWorkout} className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-neutral-950">Finish & Save</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cancel Workout Confirmation Modal */}
