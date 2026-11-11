@@ -10,6 +10,7 @@ interface TrendLineChartProps {
   unit: string;
   label: string;
   className?: string;
+  latestPointColor?: string;
 }
 
 const toLocalDate = (value: string) => {
@@ -17,7 +18,7 @@ const toLocalDate = (value: string) => {
   return new Date(`${datePart}T12:00:00`);
 };
 
-export const TrendLineChart: React.FC<TrendLineChartProps> = ({ points, unit, label, className = '' }) => {
+export const TrendLineChart: React.FC<TrendLineChartProps> = ({ points, unit, label, className = '', latestPointColor = '#d8b36a' }) => {
   const gradientId = `trend-fill-${useId().replace(/:/g, '')}`;
   const width = 360;
   const height = 154;
@@ -78,7 +79,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({ points, unit, la
             cx={point.x}
             cy={point.y}
             r={index === coordinates.length - 1 ? 5 : 3.5}
-            fill={index === coordinates.length - 1 ? '#d8b36a' : '#71b593'}
+            fill={index === coordinates.length - 1 ? latestPointColor : '#71b593'}
             stroke="#0a0a0a"
             strokeWidth="2"
           >
