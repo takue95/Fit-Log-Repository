@@ -502,6 +502,7 @@ export default function App() {
               <ActiveWorkoutView
                 workout={activeWorkout}
                 settings={settings}
+                routineDescription={routines.find((routine) => routine.id === activeWorkout.routineId)?.description}
                 allExercises={exercises}
                 history={history}
                 onUpdateWorkout={(updater) => setActiveWorkout((prev) => (prev ? updater(prev) : null))}
