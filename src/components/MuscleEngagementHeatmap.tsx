@@ -354,61 +354,12 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     return result;
   }, [selectedWorkouts]);
 
-  const muscleMapValues = useMemo<MuscleMapValues>(() => {
-    const totals: Partial<Record<MuscleGroup, { weightedSets: number; workouts: Set<string> }>> = {};
-    const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-
-    const categoryFallback: Partial<Record<Exercise['category'], MuscleGroup>> = {
-      Chest: 'CHEST',
-      Back: 'LATS',
-      Shoulders: 'SHOULDERS_SIDE',
-      Quads: 'QUADS',
-      Hamstrings: 'HAMSTRINGS',
-      Glutes: 'GLUTES',
-      Biceps: 'BICEPS',
-      Forearms: 'FOREARMS',
-      Triceps: 'TRICEPS',
-      Core: 'CORE',
-      Calves: 'CALVES',
-    };
-
-    const addSets = (group: MuscleGroup, count: number, workoutId: string) => {
-      // The bundled figure currently has no traced surfaces for these groups.
-      if (group === 'HIP_FLEXORS' || group === 'BACK_UPPER') return;
-      const total = totals[group] ?? { weightedSets: 0, workouts: new Set<string>() };
-      total.weightedSets += count;
-      total.workouts.add(workoutId);
-      totals[group] = total;
-    };
-
-    selectedWorkouts.forEach((workout) => {
-        workout.exercises.forEach((loggedExercise) => {
-          const completedSets = loggedExercise.sets.filter((set) => set.completed);
-          if (completedSets.length === 0) return;
-
-          const exercise = exerciseById.get(loggedExercise.exerciseId);
-          const primaryGroups = [...new Set((exercise?.primaryMuscles ?? []).flatMap(mapAnatomyName))];
-          const secondaryGroups = [...new Set((exercise?.secondaryMuscles ?? []).flatMap(mapAnatomyName))]
-            .filter((group) => !primaryGroups.includes(group));
-          const targets = primaryGroups.length > 0
-            ? primaryGroups
-            : [mapAnatomyName(loggedExercise.exerciseName)[0] ?? categoryFallback[loggedExercise.category]].filter(
-                (group): group is MuscleGroup => Boolean(group)
-              );
-
-          targets.forEach((group) => addSets(group, completedSets.length, workout.id));
-          secondaryGroups.forEach((group) => addSets(group, completedSets.length * 0.5, workout.id));
-        });
-    });
-
-    return Object.fromEntries(
-      Object.entries(totals).map(([group, total]) => [group, {
-        score: Math.min(100, (total.weightedSets / 14) * 100),
-        sets: Math.round(total.weightedSets * 10) / 10,
-        sessions: total.workouts.size,
-      }])
-    ) as MuscleMapValues;
-  }, [exercises, selectedWorkouts]);
+  const selectedMuscleMapValues = useMemo<MuscleMapValues>(() => {
+    const selectedGroups = Object.entries(MAP_GROUP_TO_MUSCLE)
+      .filter(([, muscle]) => muscle === selectedMuscle)
+      .map(([group]) => [group, { score: 100 }]);
+    return Object.fromEntries(selectedGroups) as MuscleMapValues;
+  }, [selectedMuscle]);
 
   const totalSetsLogged = Object.values(muscleData).reduce((sum, m) => sum + m.setsCount, 0);
   const activeMusclesCount = Object.values(muscleData).filter((m) => m.setsCount > 0).length;
@@ -512,13 +463,12 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
 
           <div className="flex min-h-[300px] items-center justify-center py-2">
             <MuscleMap
-              values={muscleMapValues}
+              values={selectedMuscleMapValues}
               sex="MALE"
               view={viewOrientation === 'both' ? 'BOTH' : viewOrientation === 'front' ? 'FRONT' : 'BACK'}
-              colorModel="LOAD"
               monochromeColor="#d2aa55"
-              monochromeBaseColor="#303932"
-              glow
+              monochromeBaseColor="#515459"
+              glow={false}
               showLegend={false}
               tooltipFields={[]}
               labels={MUSCLE_MAP_LABELS}
@@ -542,13 +492,14 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
 
           <div className="pt-3 border-t border-neutral-800/80 flex flex-col gap-2">
             <div className="flex items-center justify-between text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Training volume</span>
+              <span>Muscle focus</span>
               <span>Tap a muscle to inspect</span>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-neutral-400">
-              <span>Less</span>
-              <div className="h-2 flex-1 rounded-full bg-gradient-to-r from-neutral-700 via-emerald-800 to-emerald-300" />
-              <span>More</span>
+              <span className="h-2.5 w-2.5 rounded-full bg-fitlog-gold" aria-hidden="true" />
+              <span>Selected muscle</span>
+              <span className="ml-auto h-2.5 w-2.5 rounded-full bg-[#515459]" aria-hidden="true" />
+              <span>Other muscles</span>
             </div>
           </div>
         </div>
