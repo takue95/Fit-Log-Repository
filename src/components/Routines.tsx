@@ -33,28 +33,20 @@ const CATEGORY_MUSCLES: Partial<Record<Exercise['category'], MapMuscleGroup>> = 
   Calves: 'CALVES'
 };
 
-const UPPER_MUSCLES = new Set<MapMuscleGroup>([
-  'CHEST', 'LATS', 'TRAPEZIUS', 'RHOMBOIDS', 'SHOULDERS_FRONT', 'SHOULDERS_SIDE',
-  'SHOULDERS_REAR', 'BICEPS', 'TRICEPS', 'FOREARMS'
-]);
-const LOWER_MUSCLES = new Set<MapMuscleGroup>([
-  'GLUTES', 'QUADS', 'HAMSTRINGS', 'CALVES', 'ADDUCTORS', 'ABDUCTORS'
-]);
-
 function mapAnatomyToMuscles(name: string): MapMuscleGroup[] {
   const value = name.toLowerCase();
   if (value.includes('pectoral') || value.includes('chest')) return ['CHEST'];
   if (value.includes('trapez') || value.includes('trap')) return ['TRAPEZIUS'];
   if (value.includes('rhomboid') || value.includes('mid back') || value.includes('upper back')) return ['RHOMBOIDS'];
-  if (value.includes('lat')) return ['LATS'];
-  if (value.includes('lower back') || value.includes('erector')) return ['BACK_LOWER'];
   if (value.includes('rear delt') || value.includes('posterior delt') || value.includes('rear deltoid')) return ['SHOULDERS_REAR'];
   if (value.includes('front delt') || value.includes('anterior delt') || value.includes('front deltoid')) return ['SHOULDERS_FRONT'];
   if (value.includes('side delt') || value.includes('lateral delt') || value.includes('side deltoid')) return ['SHOULDERS_SIDE'];
-  if (value.includes('shoulder') || value.includes('deltoid') || value.includes('delt')) return ['SHOULDERS_SIDE'];
-  if (value.includes('bicep') || value.includes('brachialis')) return ['BICEPS'];
   if (value.includes('tricep')) return ['TRICEPS'];
+  if (value.includes('bicep') || value.includes('brachialis')) return ['BICEPS'];
   if (value.includes('forearm') || value.includes('grip')) return ['FOREARMS'];
+  if (value.includes('shoulder') || value.includes('deltoid') || value.includes('delt')) return ['SHOULDERS_SIDE'];
+  if (value.includes('latissimus') || value.includes('lats')) return ['LATS'];
+  if (value.includes('lower back') || value.includes('erector')) return ['BACK_LOWER'];
   if (value.includes('oblique')) return ['OBLIQUES'];
   if (value.includes('abdominal') || value.includes('abs') || value.includes('core')) return ['CORE'];
   if (value.includes('glute')) return ['GLUTES'];
@@ -83,38 +75,43 @@ function getRoutineMuscleMap(routine: RoutineTemplate, exercises: Exercise[]) {
   const values = Object.fromEntries(
     [...scores.entries()].map(([group, score]) => [group, { score: Math.max(28, Math.round((score / maximum) * 100)) }])
   ) as MuscleMapValues;
-  const groups = [...scores.keys()];
-  const hasUpper = groups.some((group) => UPPER_MUSCLES.has(group));
-  const hasLower = groups.some((group) => LOWER_MUSCLES.has(group));
-  const region: MuscleMapRegion | undefined = hasUpper && !hasLower
-    ? 'UPPER_BODY'
-    : hasLower && !hasUpper
-      ? 'LOWER_BODY'
-      : undefined;
+  const frontGroups = new Set<MapMuscleGroup>([
+    'CHEST', 'SHOULDERS_FRONT', 'SHOULDERS_SIDE', 'BICEPS', 'CORE', 'OBLIQUES',
+    'QUADS', 'ADDUCTORS'
+  ]);
+  const backGroups = new Set<MapMuscleGroup>([
+    'LATS', 'TRAPEZIUS', 'RHOMBOIDS', 'BACK_LOWER', 'SHOULDERS_REAR', 'TRICEPS',
+    'FOREARMS', 'GLUTES', 'HAMSTRINGS', 'CALVES', 'ABDUCTORS'
+  ]);
+  const frontScore = [...scores].reduce((sum, [group, score]) => sum + (frontGroups.has(group) ? score : 0), 0);
+  const backScore = [...scores].reduce((sum, [group, score]) => sum + (backGroups.has(group) ? score : 0), 0);
+  const view: 'FRONT' | 'BACK' | 'BOTH' = frontScore > backScore * 1.35
+    ? 'FRONT'
+    : backScore > frontScore * 1.35
+      ? 'BACK'
+      : 'BOTH';
 
-  return { values, region };
+  return { values, view };
 }
 
 const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Exercise[] }> = ({ routine, exercises }) => {
-  const { values, region } = getRoutineMuscleMap(routine, exercises);
+  const { values, view } = getRoutineMuscleMap(routine, exercises);
   return (
     <div
-      className="w-[76px] h-[88px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
+      className="w-[92px] h-[96px] shrink-0 flex items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
       role="img"
       aria-label={`Muscle focus for ${routine.title}`}
     >
       <MuscleMap
         values={values}
         sex="MALE"
-        view="BOTH"
-        region={region}
-        cropToRegion={Boolean(region)}
+        view={view}
         monochromeColor="#d2aa55"
         monochromeBaseColor="#465148"
         glow={false}
         showLegend={false}
         tooltipFields={[]}
-        figureWidth={38}
+        figureWidth={view === 'BOTH' ? 66 : 82}
         backgroundImageFront={maleFront}
         backgroundImageBack={maleBack}
         backgroundGrayscale
@@ -125,7 +122,6 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
     </div>
   );
 };
-
 
 interface RoutinesProps {
   routines: RoutineTemplate[];
