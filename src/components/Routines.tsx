@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Plus, 
   Play, 
@@ -12,7 +12,7 @@ import {
   X,
   Target
 } from 'lucide-react';
-import { RoutineTemplate, Exercise } from '../types/fitness';
+import { RoutineTemplate, Exercise, CompletedWorkout, ActiveWorkout } from '../types/fitness';
 import { NumericInput } from './NumericInput';
 import { MuscleMap } from '@musclemap/react';
 import type { MuscleGroup as MapMuscleGroup, MuscleMapRegion, MuscleMapValues } from '@musclemap/core';
@@ -105,22 +105,78 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
 interface RoutinesProps {
   routines: RoutineTemplate[];
   exercises: Exercise[];
+  history: CompletedWorkout[];
+  activeWorkout: ActiveWorkout | null;
   onStartRoutine: (routine: RoutineTemplate) => void;
   onSaveRoutine: (routine: RoutineTemplate) => void;
   onDeleteRoutine: (routineId: string) => void;
   onOpenExercisePicker: () => void;
 }
 
+const SPLIT_PREFERENCE_KEY = 'fitlog_current_split_v1';
+
+const splitNameForRoutine = (routine: RoutineTemplate) => {
+  if (routine.title.toLowerCase().includes('arnold split')) return 'Arnold Split';
+  if (routine.isCustom || routine.category === 'Custom') return 'Custom';
+  return routine.category;
+};
+
+const inferCurrentSplit = (
+  routines: RoutineTemplate[],
+  history: CompletedWorkout[],
+  activeWorkout: ActiveWorkout | null
+) => {
+  const activeRoutine = activeWorkout?.routineId
+    ? routines.find((routine) => routine.id === activeWorkout.routineId)
+    : undefined;
+  if (activeRoutine) return splitNameForRoutine(activeRoutine);
+
+  const recentWorkouts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  for (const workout of recentWorkouts) {
+    const routine = routines.find((item) =>
+      (workout as CompletedWorkout & { routineId?: string }).routineId === item.id ||
+      workout.title.toLowerCase() === item.title.toLowerCase()
+    );
+    if (routine) return splitNameForRoutine(routine);
+  }
+
+  const available = Array.from(new Set(routines.map(splitNameForRoutine)));
+  return available.includes('Arnold Split')
+    ? 'Arnold Split'
+    : available.includes('Push / Pull / Legs')
+      ? 'Push / Pull / Legs'
+      : available[0] || 'All';
+};
+
 export const RoutinesView: React.FC<RoutinesProps> = ({
   routines,
   exercises,
+  history,
+  activeWorkout,
   onStartRoutine,
   onSaveRoutine,
   onDeleteRoutine
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedSplit, setSelectedSplit] = useState<string>(() => {
+    const inferred = inferCurrentSplit(routines, history, activeWorkout);
+    try {
+      const saved = localStorage.getItem(SPLIT_PREFERENCE_KEY);
+      return saved && routines.some((routine) => splitNameForRoutine(routine) === saved) ? saved : inferred;
+    } catch {
+      return inferred;
+    }
+  });
+  const [splitView, setSplitView] = useState<'current' | 'browse'>('current');
   const [isCreatingRoutine, setIsCreatingRoutine] = useState<boolean>(false);
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SPLIT_PREFERENCE_KEY, selectedSplit);
+    } catch {
+      // Keep the selection available for this session if browser storage is disabled.
+    }
+  }, [selectedSplit]);
 
   // New routine builder form state
   const [title, setTitle] = useState('');
@@ -131,11 +187,19 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     { exerciseId: 'barbell-bench-press', defaultSets: 3, defaultReps: 8 }
   ]);
 
-  const categories = ['All', 'Push / Pull / Legs', 'Upper / Lower', 'Full Body', 'Specialized', 'Custom'];
-
-  const filteredRoutines = routines.filter(
-    (r) => selectedCategory === 'All' || r.category === selectedCategory
-  );
+  const splitOptions = Array.from(new Set(routines.map(splitNameForRoutine)));
+  const currentSplitRoutines = routines
+    .filter((routine) => splitNameForRoutine(routine) === selectedSplit)
+    .sort((a, b) => {
+      const order = (title: string) =>
+        title.toLowerCase().includes('chest & back') ? 0 :
+        title.toLowerCase().includes('legs') ? 1 :
+        title.toLowerCase().includes('shoulders & arms') ? 2 : 3;
+      return order(a.title) - order(b.title);
+    });
+  const visibleRoutines = splitView === 'current'
+    ? currentSplitRoutines
+    : routines.filter((routine) => splitNameForRoutine(routine) === selectedSplit);
 
   const handleAddExerciseToRoutine = (exId: string) => {
     setSelectedExIds((prev) => [
@@ -188,31 +252,81 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
         </button>
       </div>
 
-      {/* Category Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-xl whitespace-nowrap transition ${
-              selectedCategory === cat
-                ? 'bg-emerald-500 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      <div className="flex rounded-xl border border-neutral-800 bg-neutral-950 p-1">
+        <button
+          onClick={() => setSplitView('current')}
+          className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
+            splitView === 'current' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          Current Split
+        </button>
+        <button
+          onClick={() => setSplitView('browse')}
+          className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
+            splitView === 'browse' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          Browse Splits
+        </button>
       </div>
+
+      {splitView === 'current' ? (
+        <section className="rounded-2xl border border-emerald-800/50 bg-gradient-to-br from-emerald-950/40 via-neutral-900 to-neutral-900 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[.14em] text-emerald-300">Your current split</p>
+              <h3 className="mt-1 text-lg font-extrabold text-white">{selectedSplit}</h3>
+              <p className="mt-1 text-[11px] text-neutral-400">{currentSplitRoutines.length} workout{currentSplitRoutines.length === 1 ? '' : 's'} in this plan</p>
+            </div>
+            <button
+              onClick={() => setSplitView('browse')}
+              className="shrink-0 rounded-xl border border-emerald-800/70 bg-emerald-950/40 px-3 py-2 text-[11px] font-bold text-emerald-300 hover:bg-emerald-950/70"
+            >
+              Change split
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
+          <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">Choose a training split</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {splitOptions.map((split) => (
+              <button
+                key={split}
+                onClick={() => setSelectedSplit(split)}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  selectedSplit === split
+                    ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300'
+                    : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white'
+                }`}
+              >
+                {split}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Routine Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        {filteredRoutines.map((routine) => (
+        {visibleRoutines.map((routine) => (
           <div
             key={routine.id}
-            className="group rounded-2xl bg-neutral-900 border border-neutral-800/90 hover:border-neutral-700 p-5 shadow-lg flex flex-col justify-between gap-4 transition"
+            className="group rounded-2xl bg-neutral-900 border border-neutral-800/90 hover:border-emerald-800/60 p-5 shadow-lg flex flex-col justify-between gap-4 transition"
           >
-            <div>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setViewingRoutine(routine)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setViewingRoutine(routine);
+                }
+              }}
+              className="cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            >
               <div className="flex items-start gap-3">
                 <RoutineMuscleThumbnail routine={routine} exercises={exercises} />
                 <div className="min-w-0 flex-1">
@@ -227,7 +341,10 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                       </span>
                       {routine.isCustom && (
                         <button
-                          onClick={() => onDeleteRoutine(routine.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onDeleteRoutine(routine.id);
+                          }}
                           className="p-1 text-neutral-500 hover:text-red-400 rounded transition"
                           title="Delete routine"
                         >
@@ -267,23 +384,13 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-neutral-800/80">
-              <button
-                onClick={() => setViewingRoutine(routine)}
-                className="text-xs text-neutral-400 hover:text-white font-medium flex items-center gap-1"
-              >
-                View Workout
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={() => onStartRoutine(routine)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                Start Routine
-              </button>
-            </div>
+            <button
+              onClick={() => setViewingRoutine(routine)}
+              className="flex items-center justify-between border-t border-neutral-800/80 pt-3 text-left text-xs font-semibold text-neutral-300 transition hover:text-emerald-300"
+            >
+              <span>Open workout plan</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         ))}
       </div>
@@ -291,25 +398,42 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
       {/* Routine Detail Modal */}
       {viewingRoutine && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg max-h-[90vh] bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 text-neutral-100 overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
-                  {viewingRoutine.category} • {viewingRoutine.difficulty}
-                </span>
-                <h3 className="text-lg font-bold text-white mt-1.5">{viewingRoutine.title}</h3>
+          <div className="w-full max-w-lg max-h-[90vh] bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-neutral-100 overflow-y-auto">
+            <div className="sticky -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 top-0 z-10 flex flex-col gap-3 border-b border-neutral-800 bg-neutral-900/95 px-5 pt-5 pb-3 backdrop-blur sm:px-6 sm:pt-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
+                    {viewingRoutine.category} • {viewingRoutine.difficulty}
+                  </span>
+                  <h3 className="mt-1.5 text-lg font-bold text-white">{viewingRoutine.title}</h3>
+                </div>
+                <button
+                  onClick={() => setViewingRoutine(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-neutral-400 hover:text-white"
+                  aria-label="Close workout preview"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
               <button
-                onClick={() => setViewingRoutine(null)}
-                className="p-1.5 text-neutral-400 hover:text-white rounded-lg"
+                onClick={() => {
+                  onStartRoutine(viewingRoutine);
+                  setViewingRoutine(null);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
               >
-                <X className="w-5 h-5" />
+                <Play className="h-4 w-4 fill-current" />
+                Start Workout
               </button>
             </div>
 
-            <p className="text-xs text-neutral-300 leading-relaxed">
-              {viewingRoutine.description}
-            </p>
+            <div className="flex items-center gap-3 rounded-2xl border border-neutral-800 bg-neutral-950 p-3.5">
+              <RoutineMuscleThumbnail routine={viewingRoutine} exercises={exercises} />
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Workout focus</p>
+                <p className="mt-1 text-xs leading-relaxed text-neutral-300">{viewingRoutine.description}</p>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
@@ -350,24 +474,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setViewingRoutine(null)}
-                className="px-4 py-2 text-xs text-neutral-400 hover:text-white"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  onStartRoutine(viewingRoutine);
-                  setViewingRoutine(null);
-                }}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-lg shadow-emerald-500/20"
-              >
-                <Play className="w-4 h-4 fill-current" />
-                Start This Workout
-              </button>
-            </div>
+
           </div>
         </div>
       )}
