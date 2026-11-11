@@ -95,8 +95,8 @@ input[type="number"] { -moz-appearance: textfield; }
 
 .routine-muscle-map.muscle-map-figures.paired-view > div:first-child > svg {
   flex: 0 0 auto;
-  width: 58px !important;
-  max-width: 58px;
+  width: 64px !important;
+  max-width: 64px;
   height: auto;
 }
 
