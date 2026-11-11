@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound } from 'lucide-react';
 import { 
   RoutineTemplate, 
@@ -23,6 +23,7 @@ import { RestTimerOverlay } from './components/modals/RestTimerOverlay';
 import { WorkoutCompletedModal } from './components/modals/WorkoutCompletedModal';
 import { OneRMCalculatorModal } from './components/modals/OneRMCalculatorModal';
 import { calculate1RM } from './utils/fitnessCalc';
+import { FitLogDriveData, GOOGLE_DRIVE_CLIENT_ID, loadDriveBackup, mergeDriveData, requestGoogleDriveToken, sameDriveData, saveDriveBackup } from './utils/googleDriveSync';
 
 const STORAGE_KEYS = {
   EXERCISES: 'fitlog_exercises_v1',
@@ -142,6 +143,33 @@ export default function App() {
   const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false);
   const [isOneRMCalcOpen, setIsOneRMCalcOpen] = useState(false);
   const [completedWorkoutSummary, setCompletedWorkoutSummary] = useState<CompletedWorkout | null>(null);
+  const [driveToken, setDriveToken] = useState<string | null>(null);
+  const [driveSyncStatus, setDriveSyncStatus] = useState<'setup-required' | 'disconnected' | 'connecting' | 'syncing' | 'synced' | 'error'>(
+    GOOGLE_DRIVE_CLIENT_ID ? 'disconnected' : 'setup-required'
+  );
+  const [driveSyncMessage, setDriveSyncMessage] = useState('');
+  const [driveLastSyncedAt, setDriveLastSyncedAt] = useState<string | null>(null);
+  const [driveSyncPulse, setDriveSyncPulse] = useState(0);
+  const driveSyncInProgress = useRef(false);
+  const skipNextDriveAutoSync = useRef(false);
+  const driveDataRef = useRef<FitLogDriveData>({
+    schemaVersion: 1,
+    exercises,
+    routines,
+    history,
+    bodyWeights,
+    settings,
+    activeWorkout
+  });
+  driveDataRef.current = {
+    schemaVersion: 1,
+    exercises,
+    routines,
+    history,
+    bodyWeights,
+    settings,
+    activeWorkout
+  };
 
   // Sync to local storage
   useEffect(() => {
@@ -171,6 +199,117 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }, [settings]);
+
+  const applyDriveData = useCallback((data: FitLogDriveData) => {
+    setExercises(data.exercises);
+    setRoutines(data.routines);
+    setHistory(data.history);
+    setBodyWeights(data.bodyWeights);
+    setSettings(data.settings);
+    setActiveWorkout(data.activeWorkout ?? null);
+  }, []);
+
+  const syncDriveData = useCallback(async (preferCloud: boolean) => {
+    if (!driveToken || driveSyncInProgress.current) return;
+    driveSyncInProgress.current = true;
+    setDriveSyncStatus('syncing');
+    setDriveSyncMessage('');
+
+    try {
+      const remote = await loadDriveBackup(driveToken);
+      const local = driveDataRef.current;
+      const merged = remote ? mergeDriveData(remote.data, local, preferCloud) : local;
+
+      if (!remote || !sameDriveData(merged, remote.data)) {
+        await saveDriveBackup(driveToken, merged, remote?.file);
+      }
+      if (!sameDriveData(merged, local)) {
+        skipNextDriveAutoSync.current = true;
+        applyDriveData(merged);
+      }
+      driveDataRef.current = merged;
+      setDriveLastSyncedAt(new Date().toISOString());
+      setDriveSyncStatus('synced');
+    } catch (error) {
+      setDriveToken(null);
+      setDriveSyncStatus('error');
+      setDriveSyncMessage(error instanceof Error ? error.message : 'Could not sync with Google Drive.');
+    } finally {
+      driveSyncInProgress.current = false;
+    }
+  }, [driveToken, applyDriveData]);
+
+  const handleConnectDrive = async () => {
+    if (!GOOGLE_DRIVE_CLIENT_ID) {
+      setDriveSyncStatus('setup-required');
+      setDriveSyncMessage('Google OAuth setup is needed before FitLog can connect.');
+      return;
+    }
+
+    setDriveSyncStatus('connecting');
+    setDriveSyncMessage('');
+    try {
+      const token = await requestGoogleDriveToken(GOOGLE_DRIVE_CLIENT_ID);
+      const remote = await loadDriveBackup(token);
+      const local = driveDataRef.current;
+      const merged = remote ? mergeDriveData(remote.data, local, true) : local;
+
+      if (!remote || !sameDriveData(merged, remote.data)) {
+        await saveDriveBackup(token, merged, remote?.file);
+      }
+      if (!sameDriveData(merged, local)) {
+        skipNextDriveAutoSync.current = true;
+        applyDriveData(merged);
+      }
+      driveDataRef.current = merged;
+      setDriveToken(token);
+      setDriveLastSyncedAt(new Date().toISOString());
+      setDriveSyncStatus('synced');
+    } catch (error) {
+      setDriveSyncStatus('error');
+      setDriveSyncMessage(error instanceof Error ? error.message : 'Could not connect to Google Drive.');
+    }
+  };
+
+  const handleSyncDrive = () => {
+    if (driveToken) setDriveSyncPulse((value) => value + 1);
+  };
+
+  const handleDisconnectDrive = () => {
+    setDriveToken(null);
+    setDriveSyncStatus(GOOGLE_DRIVE_CLIENT_ID ? 'disconnected' : 'setup-required');
+    setDriveSyncMessage('');
+  };
+
+  useEffect(() => {
+    if (!driveToken) return;
+    if (skipNextDriveAutoSync.current) {
+      skipNextDriveAutoSync.current = false;
+      return;
+    }
+    const timeout = window.setTimeout(() => void syncDriveData(false), 1200);
+    return () => window.clearTimeout(timeout);
+  }, [driveToken, history, routines, exercises, bodyWeights, settings, activeWorkout, syncDriveData]);
+
+  useEffect(() => {
+    if (!driveToken || driveSyncPulse === 0) return;
+    void syncDriveData(true);
+  }, [driveToken, driveSyncPulse, syncDriveData]);
+
+  useEffect(() => {
+    if (!driveToken) return;
+    const requestSync = () => {
+      if (document.visibilityState === 'visible') setDriveSyncPulse((value) => value + 1);
+    };
+    window.addEventListener('focus', requestSync);
+    document.addEventListener('visibilitychange', requestSync);
+    const interval = window.setInterval(requestSync, 60_000);
+    return () => {
+      window.removeEventListener('focus', requestSync);
+      document.removeEventListener('visibilitychange', requestSync);
+      window.clearInterval(interval);
+    };
+  }, [driveToken]);
 
   // Workout Creation Handlers
   const handleStartEmptyWorkout = () => {
@@ -581,6 +720,13 @@ export default function App() {
               onDeleteHistoryItem={handleDeleteHistoryItem}
               onExportData={handleExportData}
               onImportData={handleImportData}
+              driveConfigured={Boolean(GOOGLE_DRIVE_CLIENT_ID)}
+              driveSyncStatus={driveSyncStatus}
+              driveLastSyncedAt={driveLastSyncedAt}
+              driveSyncMessage={driveSyncMessage}
+              onConnectDrive={handleConnectDrive}
+              onSyncDrive={handleSyncDrive}
+              onDisconnectDrive={handleDisconnectDrive}
             />
           )}
       </main>
