@@ -100,9 +100,21 @@ input[type="number"] { -moz-appearance: textfield; }
   height: auto;
 }
 
-.routine-muscle-map svg defs linearGradient stop[stop-color="#33405a"] { stop-color: #737a76 !important; }
-.routine-muscle-map svg defs linearGradient stop[stop-color="#212c40"] { stop-color: #4b524e !important; }
-.routine-muscle-map svg path[fill="#3a465e"] { fill: #747b77 !important; }
+.muscle-focus-map svg defs linearGradient stop[stop-color="#33405a"] { stop-color: #737a76 !important; }
+.muscle-focus-map svg defs linearGradient stop[stop-color="#212c40"] { stop-color: #4b524e !important; }
+.muscle-focus-map svg path[fill="#3a465e"] { fill: #747b77 !important; }
+
+.workout-focus-map-content.muscle-map-figures.paired-view > div:first-child {
+  flex-wrap: nowrap;
+  gap: 8px !important;
+  align-items: center;
+}
+
+.workout-focus-map-content.muscle-map-figures.paired-view > div:first-child > svg {
+  width: min(136px, calc((100vw - 112px) / 2)) !important;
+  max-width: 136px;
+  height: auto;
+}
 
 /* iOS Safari zooms the page when a text control uses less than 16px text. Keep
    every text-entry control at the safe size, not only workout number fields. */
