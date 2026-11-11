@@ -74,23 +74,7 @@ function getRoutineMuscleMap(routine: RoutineTemplate, exercises: Exercise[]) {
   const values = Object.fromEntries(
     [...scores.entries()].map(([group, score]) => [group, { score: Math.max(28, Math.round((score / maximum) * 100)) }])
   ) as MuscleMapValues;
-  const frontGroups = new Set<MapMuscleGroup>([
-    'CHEST', 'SHOULDERS_FRONT', 'SHOULDERS_SIDE', 'BICEPS', 'CORE', 'OBLIQUES',
-    'QUADS', 'ADDUCTORS'
-  ]);
-  const backGroups = new Set<MapMuscleGroup>([
-    'LATS', 'TRAPEZIUS', 'RHOMBOIDS', 'BACK_LOWER', 'SHOULDERS_REAR', 'TRICEPS',
-    'FOREARMS', 'GLUTES', 'HAMSTRINGS', 'CALVES', 'ABDUCTORS'
-  ]);
-  const frontScore = [...scores].reduce((sum, [group, score]) => sum + (frontGroups.has(group) ? score : 0), 0);
-  const backScore = [...scores].reduce((sum, [group, score]) => sum + (backGroups.has(group) ? score : 0), 0);
-  const view: 'FRONT' | 'BACK' | 'BOTH' = frontScore > backScore * 2.1
-    ? 'FRONT'
-    : backScore > frontScore * 2.1
-      ? 'BACK'
-      : 'BOTH';
-
-  return { values, view };
+  return { values, view: 'BOTH' as const };
 }
 
 const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Exercise[] }> = ({ routine, exercises }) => {
@@ -110,12 +94,7 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
         glow={false}
         showLegend={false}
         tooltipFields={[]}
-        figureWidth={view === 'BOTH' ? 58 : 65}
-        backgroundImageFront={maleFront}
-        backgroundImageBack={maleBack}
-        backgroundGrayscale
-        backgroundBrightness={1.08}
-        backgroundOpacity={0.72}
+        figureWidth={58}
         className="routine-muscle-map muscle-map-figures paired-view"
         style={{ width: '100%', height: '100%', justifyContent: 'center' }}
       />
