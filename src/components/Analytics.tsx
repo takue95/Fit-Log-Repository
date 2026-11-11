@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  TrendingUp, 
-  Trophy, 
-  Flame, 
-  Calendar, 
-  Scale, 
-  Plus, 
-  Award, 
-  ChevronDown,
-  BarChart3,
-  Dumbbell
-} from 'lucide-react';
+import { TrendingUp, Trophy, BarChart3 } from 'lucide-react';
 import { CompletedWorkout, BodyWeightEntry, UserSettings, Exercise } from '../types/fitness';
 import { calculate1RM } from '../utils/fitnessCalc';
 import { MuscleEngagementHeatmap } from './MuscleEngagementHeatmap';
@@ -30,14 +19,12 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   bodyWeights,
   exercises,
   settings,
-  onAddBodyWeight,
   onOpenOneRMCalc
 }) => {
   const [selectedPRCompound, setSelectedPRCompound] = useState<string>('barbell-bench-press');
   const [progressionRange, setProgressionRange] = useState<'3M' | '6M' | '12M' | 'All'>('6M');
   const [selectedProgressPoint, setSelectedProgressPoint] = useState<string | null>(null);
-  const [newBwValue, setNewBwValue] = useState<string>('');
-  const [isAddingBw, setIsAddingBw] = useState<boolean>(false);
+  const [selectedTrainingRange, setSelectedTrainingRange] = useState<'latest' | '7d' | '1m'>('latest');
 
   // Big compounds for 1RM curve
   const trackedCompounds = [
@@ -168,6 +155,36 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     ...(progressionRange === 'All' || rangeWindow && rangeWindow.start.getFullYear() !== new Date(rangeWindow.end.getTime() - 1).getFullYear() ? { year: 'numeric' as const } : {})
   });
 
+  const selectedTrainingWorkouts = React.useMemo(() => {
+    const now = new Date();
+    if (selectedTrainingRange === 'latest') {
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayWorkouts = history.filter((workout) => {
+        const timestamp = new Date(workout.date).getTime();
+        return Number.isFinite(timestamp) && timestamp >= startOfToday && timestamp <= now.getTime();
+      });
+      if (todayWorkouts.length) return todayWorkouts;
+      const latestWorkout = history.reduce<CompletedWorkout | null>((latest, workout) => {
+        if (!Number.isFinite(new Date(workout.date).getTime())) return latest;
+        return !latest || new Date(workout.date).getTime() > new Date(latest.date).getTime() ? workout : latest;
+      }, null);
+      return latestWorkout ? [latestWorkout] : [];
+    }
+    const cutoff = new Date(now);
+    if (selectedTrainingRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
+    else cutoff.setDate(cutoff.getDate() - 30);
+    return history.filter((workout) => {
+      const timestamp = new Date(workout.date).getTime();
+      return Number.isFinite(timestamp) && timestamp >= cutoff.getTime() && timestamp <= now.getTime();
+    });
+  }, [history, selectedTrainingRange]);
+
+  const trainingOverview = React.useMemo(() => selectedTrainingWorkouts.reduce((totals, workout) => ({
+    sessions: totals.sessions + 1,
+    sets: totals.sets + workout.totalSets,
+    volume: totals.volume + workout.totalVolume
+  }), { sessions: 0, sets: 0, volume: 0 }), [selectedTrainingWorkouts]);
+
   const weeklyVolumeBars = React.useMemo(() => {
     const today = new Date();
     const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -177,33 +194,20 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
       start.setDate(start.getDate() - (4 - index) * 7);
       const end = new Date(start);
       end.setDate(end.getDate() + 7);
-      const vol = history.reduce((sum, workout) => {
+      const weekWorkouts = history.filter((workout) => {
         const date = new Date(workout.date);
-        return date >= start && date < end ? sum + workout.totalVolume : sum;
-      }, 0);
+        return date >= start && date < end;
+      });
+      const vol = weekWorkouts.reduce((sum, workout) => sum + workout.totalVolume, 0);
       return {
         week: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         vol,
+        sessions: weekWorkouts.length,
         label: vol >= 1000 ? `${(vol / 1000).toFixed(vol >= 10000 ? 0 : 1)}k` : `${Math.round(vol)}`
       };
     });
   }, [history]);
   const maxWeeklyVolume = Math.max(1, ...weeklyVolumeBars.map((bar) => bar.vol));
-
-  const muscleDistribution = React.useMemo(() => {
-    const setCounts = new Map<string, number>();
-    history.forEach((workout) => workout.exercises.forEach((exercise) => {
-      if (exercise.category === 'Cardio') return;
-      const completed = exercise.sets.filter((set) => set.completed && set.reps > 0).length;
-      if (completed) setCounts.set(exercise.category, (setCounts.get(exercise.category) ?? 0) + completed);
-    }));
-    const total = Array.from(setCounts.values()).reduce((sum, value) => sum + value, 0);
-    const colors = ['bg-emerald-500', 'bg-emerald-700', 'bg-emerald-300', 'bg-teal-500', 'bg-neutral-500'];
-    return Array.from(setCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([group, count], index) => ({ group, pct: total ? Math.round((count / total) * 100) : 0, color: colors[index] }));
-  }, [history]);
 
   const allPRs = React.useMemo(() => {
     const bestByExercise = new Map<string, { exercise: string; weight: number; reps: number; estimated1RM: number; date: string; dateValue: number }>();
@@ -226,238 +230,139 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     return Array.from(bestByExercise.values()).sort((a, b) => b.estimated1RM - a.estimated1RM).slice(0, 6);
   }, [history]);
 
-  const bodyweightPoints = React.useMemo(() => [...bodyWeights]
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-12)
-    .map((entry) => ({ date: entry.date, value: entry.weight })), [bodyWeights]);
-
-  const handleSaveBw = (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = parseFloat(newBwValue);
-    if (!val || val <= 0) return;
-    onAddBodyWeight(val, new Date().toISOString().split('T')[0]);
-    setNewBwValue('');
-    setIsAddingBw(false);
-  };
+  const sortedBodyWeights = React.useMemo(() => [...bodyWeights]
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), [bodyWeights]);
+  const bodyweightPoints = sortedBodyWeights.slice(-12).map((entry) => ({ date: entry.date, value: entry.weight }));
+  const latestBodyweight = sortedBodyWeights[sortedBodyWeights.length - 1];
+  const bodyweightMonthStart = new Date();
+  bodyweightMonthStart.setDate(bodyweightMonthStart.getDate() - 30);
+  const previousMonthBodyweight = [...sortedBodyWeights].reverse().find((entry) => new Date(entry.date) <= bodyweightMonthStart);
+  const bodyweightMonthChange = latestBodyweight && previousMonthBodyweight
+    ? latestBodyweight.weight - previousMonthBodyweight.weight
+    : null;
 
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Progress header and shared workout period */}
+      <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Strength & Analytics</h2>
-          <p className="text-xs text-neutral-400">Progression curves, PR milestones, and volume</p>
+          <h2 className="text-xl font-extrabold text-white tracking-tight">Progress</h2>
+          <p className="text-xs text-neutral-400">Your training, connected in one view</p>
         </div>
-
-      </div>
-
-      {/* Muscle Engagement Heat Map (7-Day Biometrics) */}
-      <MuscleEngagementHeatmap
-        history={history}
-        exercises={exercises}
-        settings={settings}
-      />
-
-      {/* PR Wall (Medals & Trophies) */}
-      <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-xl flex flex-col gap-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-fitlog-gold" />
-            <h3 className="text-base font-bold text-white">Personal Records Wall</h3>
-          </div>
-          <span className="text-xs bg-fitlog-gold/10 text-fitlog-gold border border-fitlog-gold/20 px-2 py-0.5 rounded-full font-bold">
-            All-Time Bests
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {allPRs.map((pr, idx) => {
-            const medalColor =
-              idx === 0 ? 'text-fitlog-gold' : idx === 1 ? 'text-slate-300' : 'text-amber-700';
-
-            return (
-              <div
-                key={pr.exercise}
-                className="p-3.5 rounded-2xl bg-neutral-950/70 border border-neutral-800 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3 min-w-0 pr-2">
-                  <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center shrink-0">
-                    <Award className={`w-4 h-4 ${medalColor}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-white block truncate">
-                      {pr.exercise}
-                    </span>
-                    <span className="text-[10px] text-neutral-400">Best set · {pr.date}</span>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <span className="text-sm font-extrabold font-mono text-fitlog-gold block">
-                    {pr.weight} {settings.weightUnit}
-                  </span>
-                  <span className="text-[10px] text-neutral-400 font-mono">
-                    for {pr.reps} reps
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          {!allPRs.length && <p className="col-span-full py-5 text-center text-xs text-neutral-500">Completed strength sets will appear here as personal bests.</p>}
-        </div>
-      </div>
-
-      {/* Weekly Volume & Muscle Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Weekly Volume Chart */}
-        <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl flex flex-col justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-              <BarChart3 className="w-4 h-4 text-neutral-400" />
-              Weekly Volume Tonnage ({settings.weightUnit})
-            </div>
-            <h4 className="text-base font-bold text-white mt-1">Consistency Trend</h4>
-          </div>
-
-          <div className="flex items-end justify-between h-36 pt-4 px-2">
-            {weeklyVolumeBars.map((bar, i) => {
-              const heightPct = bar.vol > 0 ? Math.max(5, Math.round((bar.vol / maxWeeklyVolume) * 100)) : 0;
-              const isCurrent = i === weeklyVolumeBars.length - 1;
-
-              return (
-                <div key={bar.week} className="flex flex-col items-center gap-2 flex-1">
-                  <span className="text-[10px] font-mono font-bold text-neutral-400">
-                    {bar.label}
-                  </span>
-                  <div className="w-7 bg-neutral-800 rounded-t-lg h-24 flex items-end p-0.5">
-                    <div
-                      className={`w-full rounded-t-md transition-all duration-500 ${
-                        isCurrent && bar.vol > 0
-                          ? 'bg-gradient-to-t from-emerald-500 to-emerald-400'
-                          : 'bg-neutral-700 hover:bg-neutral-600'
-                      }`}
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-neutral-400 font-medium truncate max-w-[50px]">
-                    {bar.week}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          {!history.length && <p className="text-center text-[10px] text-neutral-500">No workout volume logged yet.</p>}
-        </div>
-
-        {/* Muscle Distribution Breakdown */}
-        <div className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl flex flex-col gap-3.5">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-wider">
-              <Dumbbell className="w-4 h-4 text-emerald-400" />
-              Volume Distribution
-            </div>
-            <h4 className="text-base font-bold text-white mt-1">Muscle Group Balance</h4>
-          </div>
-
-          {/* Progress bar split */}
-          <div className="w-full h-3 rounded-full overflow-hidden flex bg-neutral-800">
-            {muscleDistribution.map((m) => (
-              <div
-                key={m.group}
-                className={`${m.color} h-full transition-all`}
-                style={{ width: `${m.pct}%` }}
-                title={`${m.group}: ${m.pct}%`}
-              />
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="space-y-2 pt-1 text-xs">
-            {muscleDistribution.map((m) => (
-              <div key={m.group} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${m.color}`} />
-                  <span className="text-neutral-300 font-medium">{m.group}</span>
-                </div>
-                <span className="font-mono font-bold text-white">{m.pct}%</span>
-              </div>
-            ))}
-            {!muscleDistribution.length && <p className="py-4 text-center text-xs text-neutral-500">Muscle group totals will appear after strength workouts are logged.</p>}
-          </div>
-        </div>
-      </div>
-
-      {/* Body Weight Tracker */}
-      <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-xl flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
-              <Scale className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">Bodyweight Tracker</h3>
-              <p className="text-xs text-neutral-400">Track body composition & trend</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsAddingBw(!isAddingBw)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition"
-          >
-            <Plus className="w-3.5 h-3.5 text-emerald-400" />
-            Log Weight
-          </button>
-        </div>
-
-        <TrendLineChart points={bodyweightPoints} unit={settings.weightUnit} label="Bodyweight" />
-
-        {/* Quick Log Form */}
-        {isAddingBw && (
-          <form
-            onSubmit={handleSaveBw}
-            className="p-3.5 bg-neutral-950 rounded-2xl border border-neutral-800 flex items-center gap-2 animate-in fade-in"
-          >
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder={`Enter weight (${settings.weightUnit})...`}
-              value={newBwValue}
-              onFocus={(event) => event.currentTarget.select()}
-              onChange={(e) => setNewBwValue(e.target.value)}
-              className="numeric-entry flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-              autoFocus
-            />
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-950 p-1" role="group" aria-label="Workout period">
+          {([
+            ['latest', 'Latest / Today'],
+            ['7d', '7 Days'],
+            ['1m', '1 Month']
+          ] as const).map(([range, label]) => (
             <button
-              type="submit"
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs rounded-xl shadow"
+              key={range}
+              type="button"
+              aria-pressed={selectedTrainingRange === range}
+              onClick={() => setSelectedTrainingRange(range)}
+              className={`rounded-xl px-2 py-2.5 text-[10px] font-bold transition ${selectedTrainingRange === range ? 'bg-emerald-400 text-neutral-950 shadow-sm' : 'text-neutral-400 hover:text-white'}`}
             >
-              Save
+              {label}
             </button>
-          </form>
-        )}
-
-        {/* Weight Entries List */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {[...bodyWeights].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((bw) => (
-            <div
-              key={bw.id}
-              className="p-3 rounded-2xl bg-neutral-950/70 border border-neutral-800/80 flex flex-col text-center gap-1"
-            >
-              <span className="text-[10px] text-neutral-400">
-                {new Date(bw.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </span>
-              <span className="text-base font-extrabold font-mono text-white">
-                {bw.weight} <span className="text-[10px] text-neutral-400 font-normal">{settings.weightUnit}</span>
-              </span>
-              {bw.bodyFatPercent && (
-                <span className="text-[10px] text-emerald-400 font-semibold">
-                  {bw.bodyFatPercent}% BF
-                </span>
-              )}
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Sessions', value: trainingOverview.sessions.toString(), detail: 'in this period' },
+            { label: 'Working sets', value: trainingOverview.sets.toString(), detail: 'completed' },
+            { label: 'Volume', value: trainingOverview.volume >= 10000 ? `${(trainingOverview.volume / 1000).toFixed(1)}k` : trainingOverview.volume.toLocaleString(), detail: settings.weightUnit }
+          ].map((metric) => (
+            <div key={metric.label} className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
+              <span className="block truncate text-[9px] font-bold uppercase tracking-wide text-neutral-400">{metric.label}</span>
+              <span className="mt-2 block truncate text-xl font-extrabold tabular-nums text-white">{metric.value}</span>
+              <span className="mt-1 block truncate text-[9px] text-neutral-500">{metric.detail}</span>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Interactive muscle map follows the shared workout period */}
+      <MuscleEngagementHeatmap
+        history={history}
+        exercises={exercises}
+        settings={settings}
+        timeRange={selectedTrainingRange}
+      />
+
+      {/* One weekly workload trend combines training volume and consistency */}
+      <section className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl" aria-labelledby="workload-heading">
+        <div className="mb-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            <BarChart3 className="h-3.5 w-3.5 text-emerald-400" />
+            Last five training weeks
+          </div>
+          <h3 id="workload-heading" className="mt-1 text-base font-bold text-white">Training workload</h3>
+          <p className="text-[9px] text-neutral-500">Volume bars · session counts below</p>
+        </div>
+        <div className="flex h-36 items-end justify-between gap-2 px-1 pt-2">
+          {weeklyVolumeBars.map((bar, index) => {
+            const heightPct = bar.vol > 0 ? Math.max(5, Math.round((bar.vol / maxWeeklyVolume) * 100)) : 0;
+            const isCurrent = index === weeklyVolumeBars.length - 1;
+            return (
+              <div key={bar.week} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                <span className="text-[8px] font-mono font-semibold text-neutral-500">{bar.label}</span>
+                <div className="flex h-24 w-full max-w-9 items-end rounded-t-lg bg-neutral-800/80 p-0.5">
+                  <div className={`w-full rounded-t-md transition-all ${isCurrent && bar.vol > 0 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' : 'bg-neutral-700'}`} style={{ height: `${heightPct}%` }} />
+                </div>
+                <span className={`max-w-full truncate text-[8px] font-medium ${isCurrent ? 'text-emerald-300' : 'text-neutral-500'}`}>{isCurrent ? 'This wk' : bar.week}</span>
+                <span className="text-[8px] text-neutral-500">{bar.sessions} sess</span>
+              </div>
+            );
+          })}
+        </div>
+        {!history.length && <p className="mt-2 text-center text-[10px] text-neutral-500">Your workload trend will appear after workouts are logged.</p>}
+      </section>
+
+      {/* Bodyweight trend remains independent of workout filters */}
+      <section className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl" aria-labelledby="bodyweight-heading">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h3 id="bodyweight-heading" className="text-base font-bold text-white">Bodyweight trend</h3>
+            <p className="text-[9px] text-neutral-500">Latest 12 weigh-ins · log weight on Home</p>
+          </div>
+          {latestBodyweight && (
+            <div className="shrink-0 text-right">
+              <span className="block text-base font-extrabold tabular-nums text-white">{latestBodyweight.weight.toFixed(1)} <span className="text-[9px] font-medium text-neutral-400">{settings.weightUnit}</span></span>
+              {bodyweightMonthChange !== null && (
+                <span className={`text-[9px] font-semibold ${bodyweightMonthChange <= 0 ? 'text-emerald-400' : 'text-neutral-300'}`}>
+                  {bodyweightMonthChange > 0 ? '+' : ''}{bodyweightMonthChange.toFixed(1)} {settings.weightUnit} this month
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <TrendLineChart points={bodyweightPoints} unit={settings.weightUnit} label="Bodyweight" latestPointColor="#4fbd80" />
+      </section>
+
+      {/* Compact personal bests */}
+      <section className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl" aria-labelledby="personal-bests-heading">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-fitlog-gold" />
+            <h3 id="personal-bests-heading" className="text-base font-bold text-white">Personal bests</h3>
+          </div>
+          <span className="text-[9px] font-semibold text-neutral-500">Top lifts · all time</span>
+        </div>
+        <div className="divide-y divide-neutral-800/80">
+          {allPRs.slice(0, 3).map((pr, index) => (
+            <div key={pr.exercise} className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-fitlog-gold/10 text-[10px] font-bold text-fitlog-gold">{index + 1}</span>
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-bold text-white">{pr.exercise}</span>
+                <span className="block truncate text-[9px] text-neutral-400">{pr.weight} {settings.weightUnit} × {pr.reps} reps · {pr.date}</span>
+              </div>
+              <span className="shrink-0 text-right text-[10px] font-bold text-fitlog-gold">~{Math.round(pr.estimated1RM)} {settings.weightUnit}</span>
+            </div>
+          ))}
+          {!allPRs.length && <p className="py-4 text-center text-xs text-neutral-500">Completed strength sets will appear here as personal bests.</p>}
+        </div>
+      </section>
+
       {/* 1RM Progression Interactive Chart */}
       <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-2xl flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -564,8 +469,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                     cx={dateToX(point.dateISO)}
                     cy={dateToY(point.estimated1RM)}
                     r={isSelected ? 6 : isLast ? 4.5 : 3.5}
-                    fill={isSelected ? '#e8d7ac' : isLast ? '#d8b36a' : '#71b593'}
-                    stroke={isSelected ? '#d8b36a' : '#0a0a0a'}
+                    fill={isSelected ? '#7bd4a0' : isLast ? '#4fbd80' : '#71b593'}
+                    stroke={isSelected ? '#4fbd80' : '#0a0a0a'}
                     strokeWidth={isSelected ? 3 : 2}
                     role="button"
                     tabIndex={0}
