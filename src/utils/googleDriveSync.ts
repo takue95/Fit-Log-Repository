@@ -9,7 +9,7 @@ import {
   WorkoutSet
 } from '../types/fitness';
 
-export const GOOGLE_DRIVE_CLIENT_ID = '';
+export const GOOGLE_DRIVE_CLIENT_ID = '989997934935-od8tddudu51km8v45li1tgbka6rh8g4t.apps.googleusercontent.com';
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
