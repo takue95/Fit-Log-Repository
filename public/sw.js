@@ -1,4 +1,4 @@
-const CACHE = 'fitlog-shell-v4';
+const CACHE = 'fitlog-shell-v5';
 const BASE = self.registration.scope;
 const APP_SHELL = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`, `${BASE}fitlog-icon.svg`];
 self.addEventListener('install', (event) => {
@@ -11,7 +11,7 @@ self.addEventListener('activate', (event) => {
 });
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request).then((response) => {
+  event.respondWith(fetch(event.request, { cache: event.request.mode === 'navigate' ? 'no-store' : 'default' }).then((response) => {
     if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
     return response;
   }).catch(async () => {
