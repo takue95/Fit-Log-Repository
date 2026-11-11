@@ -114,8 +114,8 @@ const RoutineMuscleThumbnail: React.FC<{ routine: RoutineTemplate; exercises: Ex
         backgroundImageFront={maleFront}
         backgroundImageBack={maleBack}
         backgroundGrayscale
-        backgroundBrightness={1.05}
-        backgroundOpacity={0.45}
+        backgroundBrightness={1.08}
+        backgroundOpacity={0.72}
         className="routine-muscle-map muscle-map-figures paired-view"
         style={{ width: '100%', height: '100%', justifyContent: 'center' }}
       />
