@@ -267,7 +267,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                 1RM Strength Curve
               </span>
               {growthPercent !== null && (
-                <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
+                <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${growthPercent >= 0 ? 'bg-fitlog-gold/10 text-fitlog-gold border-fitlog-gold/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
                   {growthPercent > 0 ? '+' : ''}{growthPercent.toFixed(1)}% in range
                 </span>
               )}
@@ -355,8 +355,8 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                     cx={dateToX(point.dateISO)}
                     cy={dateToY(point.estimated1RM)}
                     r={isSelected ? 6 : isLast ? 4.5 : 3.5}
-                    fill={isSelected ? '#d0f0dc' : isLast ? '#9cceb0' : '#71b593'}
-                    stroke={isSelected ? '#71b593' : '#0a0a0a'}
+                    fill={isSelected ? '#e8d7ac' : isLast ? '#d8b36a' : '#71b593'}
+                    stroke={isSelected ? '#d8b36a' : '#0a0a0a'}
                     strokeWidth={isSelected ? 3 : 2}
                     role="button"
                     tabIndex={0}
@@ -411,10 +411,10 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
       <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-xl flex flex-col gap-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-emerald-400" />
+            <Trophy className="w-5 h-5 text-fitlog-gold" />
             <h3 className="text-base font-bold text-white">Personal Records Wall</h3>
           </div>
-          <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+          <span className="text-xs bg-fitlog-gold/10 text-fitlog-gold border border-fitlog-gold/20 px-2 py-0.5 rounded-full font-bold">
             All-Time Bests
           </span>
         </div>
@@ -422,7 +422,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {allPRs.map((pr, idx) => {
             const medalColor =
-              idx === 0 ? 'text-emerald-400' : idx === 1 ? 'text-slate-300' : 'text-emerald-600';
+              idx === 0 ? 'text-fitlog-gold' : idx === 1 ? 'text-slate-300' : 'text-amber-700';
 
             return (
               <div
@@ -442,7 +442,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="text-sm font-extrabold font-mono text-emerald-400 block">
+                  <span className="text-sm font-extrabold font-mono text-fitlog-gold block">
                     {pr.weight} {settings.weightUnit}
                   </span>
                   <span className="text-[10px] text-neutral-400 font-mono">
