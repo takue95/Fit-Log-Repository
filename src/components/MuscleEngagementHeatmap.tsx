@@ -516,7 +516,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               sex="MALE"
               view={viewOrientation === 'both' ? 'BOTH' : viewOrientation === 'front' ? 'FRONT' : 'BACK'}
               colorModel="LOAD"
-              monochromeColor="#78b48f"
+              monochromeColor="#d2aa55"
               monochromeBaseColor="#303932"
               glow
               showLegend={false}
