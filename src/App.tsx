@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound } from 'lucide-react';
 import { 
-  RoutineTemplate, 
+  RoutineTemplate,
+  CoachStartAction, 
   CompletedWorkout, 
   ActiveWorkout, 
   Exercise, 
@@ -117,6 +118,7 @@ export default function App() {
       vibrationEnabled: true,
       plateBarWeight: 45,
       autoStartRestTimer: true,
+      weeklyWorkoutTarget: 3,
       userWeight: 165,
       userHeightCm: 178,
       userExperience: 'Intermediate',
@@ -345,8 +347,8 @@ export default function App() {
     setCurrentScreen(2); // Go to Active Workout screen
   };
 
-  const handleStartRoutine = (routine: RoutineTemplate) => {
-    const routineExercises: WorkoutExercise[] = routine.exercises.map((re, rIdx) => {
+  const handleStartRoutine = (routine: RoutineTemplate, coachAction?: CoachStartAction) => {
+    let routineExercises: WorkoutExercise[] = routine.exercises.map((re, rIdx) => {
       const exObj = exercises.find((e) => e.id === re.exerciseId);
       const sets: WorkoutSet[] = Array.from({ length: re.defaultSets }).map((_, sIdx) => ({
         id: `s-${Date.now()}-${rIdx}-${sIdx}`,
@@ -371,12 +373,59 @@ export default function App() {
       };
     });
 
+    if (coachAction?.kind === 'target') {
+      let applied = false;
+      routineExercises = routineExercises.map((exercise) => {
+        if (exercise.exerciseId !== coachAction.exerciseId || applied) return exercise;
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set) => {
+            if (!applied && !set.completed) {
+              applied = true;
+              return { ...set, weight: coachAction.weight, reps: coachAction.reps };
+            }
+            return set;
+          })
+        };
+      });
+    }
+
+    if (coachAction?.kind === 'add-exercise') {
+      const exercise = exercises.find((item) => item.id === coachAction.exerciseId);
+      if (exercise) {
+        const previousSet = [...history]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .flatMap((workout) => workout.exercises)
+          .find((entry) => entry.exerciseId === exercise.id)?.sets
+          .filter((set) => set.completed && set.type === 'normal')
+          .slice(-1)[0];
+        routineExercises = [...routineExercises, {
+          id: `we-${Date.now()}-coach`,
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          category: exercise.category,
+          equipment: exercise.equipment,
+          restSeconds: exercise.defaultRestSeconds || settings.defaultRestSeconds,
+          sets: Array.from({ length: Math.max(1, coachAction.sets) }, (_, index) => ({
+            id: `s-${Date.now()}-coach-${index}`,
+            setNumber: index + 1,
+            type: 'normal',
+            weight: previousSet?.weight ?? (exercise.category === 'Calves' ? 0 : settings.weightUnit === 'lbs' ? 135 : 60),
+            reps: coachAction.reps,
+            completed: false,
+            previousWeight: previousSet?.weight ?? 0,
+            previousReps: previousSet?.reps ?? coachAction.reps
+          }))
+        }];
+      }
+    }
     const newWorkout: ActiveWorkout = {
       id: `workout-${Date.now()}`,
       title: routine.title,
       routineId: routine.id,
       startTime: Date.now(),
       durationSeconds: 0,
+      focusCue: coachAction?.kind === 'cue' ? coachAction.text : undefined,
       exercises: routineExercises
     };
 
@@ -460,6 +509,7 @@ export default function App() {
       totalSets,
       totalReps,
       exercises: completedExercises,
+      focusCue: activeWorkout.focusCue,
       prsAchieved
     };
 
@@ -480,8 +530,17 @@ export default function App() {
     setCurrentScreen(0);
   };
 
-  const handleAddExerciseToActive = (exercise: Exercise) => {
+  const handleAddExerciseToActive = (exercise: Exercise, setCount = 1, targetReps = 10, fallbackWeight?: number) => {
     if (!activeWorkout) return;
+    const previousSet = [...history]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .flatMap((workout) => workout.exercises)
+      .find((entry) => entry.exerciseId === exercise.id)?.sets
+      .filter((set) => set.completed && set.type === 'normal')
+      .slice(-1)[0];
+    const startingWeight = previousSet?.weight ?? fallbackWeight ??
+      (exercise.category === 'Calves' ? 0 : settings.weightUnit === 'lbs' ? 135 : 60);
+    const safeSetCount = Math.max(1, Math.min(10, Math.round(setCount)));
     const newEx: WorkoutExercise = {
       id: `we-${Date.now()}`,
       exerciseId: exercise.id,
@@ -489,18 +548,16 @@ export default function App() {
       category: exercise.category,
       equipment: exercise.equipment,
       restSeconds: exercise.defaultRestSeconds || settings.defaultRestSeconds,
-      sets: [
-        {
-          id: `s-${Date.now()}-1`,
-          setNumber: 1,
-          type: 'normal',
-          weight: settings.weightUnit === 'lbs' ? 135 : 60,
-          reps: 10,
-          completed: false,
-          previousWeight: 135,
-          previousReps: 10
-        }
-      ]
+      sets: Array.from({ length: safeSetCount }, (_, index) => ({
+        id: `s-${Date.now()}-${index + 1}`,
+        setNumber: index + 1,
+        type: 'normal',
+        weight: startingWeight,
+        reps: targetReps,
+        completed: false,
+        previousWeight: previousSet?.weight ?? startingWeight,
+        previousReps: previousSet?.reps ?? targetReps
+      }))
     };
 
     setActiveWorkout((prev) => (prev ? { ...prev, exercises: [...prev.exercises, newEx] } : null));
@@ -613,6 +670,10 @@ export default function App() {
           {currentScreen === 0 && (
             <Dashboard
               routines={routines}
+              exercises={exercises}
+              onUpdateSettings={(updates) => setSettings((previous) => ({ ...previous, ...updates }))}
+              onUpdateActiveWorkout={(updater) => setActiveWorkout((previous) => previous ? updater(previous) : previous)}
+              onAddExerciseToActive={handleAddExerciseToActive}
               history={history}
               bodyWeights={bodyWeights}
               activeWorkout={activeWorkout}

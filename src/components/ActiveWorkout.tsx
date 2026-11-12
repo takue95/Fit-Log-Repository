@@ -568,6 +568,12 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
             {routineDescription}
           </p>
         )}
+        {workout.focusCue && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-fitlog-gold/20 bg-fitlog-gold/5 px-3 py-2 text-xs leading-relaxed text-neutral-200">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-fitlog-gold" aria-hidden="true" />
+            <span><strong className="text-fitlog-gold-soft">Today’s cue</strong><span className="text-neutral-500"> · </span>{workout.focusCue}</span>
+          </div>
+        )}
         <div className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950/70 p-2.5">
           <div className="mb-1 flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
@@ -654,7 +660,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                       const firstWeight = exercise.sets[0]?.weight || 135;
                       onOpenPlateCalc(firstWeight);
                     }}
-                    className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-800 p-0 text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
                     title="Plate Calculator"
                   >
                     <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
@@ -663,7 +669,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                   <button
                     type="button"
                     onClick={() => setHistoryExerciseId(exercise.id)}
-                    className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-800 p-0 text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
                     title="View exercise history"
                     aria-label={`View history for ${exercise.exerciseName}`}
                   >
@@ -677,7 +683,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                         activeMenuExerciseId === exercise.id ? null : exercise.id
                       )
                     }
-                    className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition"
+                    aria-label={`More options for ${exercise.exerciseName}`}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-800 p-0 text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>

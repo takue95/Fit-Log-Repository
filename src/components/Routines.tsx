@@ -247,7 +247,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-extrabold text-white tracking-tight">Workout Routines</h2>
           <p className="text-xs text-neutral-400">Structured programs & custom templates</p>
@@ -255,7 +255,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
 
         <button
           onClick={() => setIsCreatingRoutine(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition"
+          className="flex shrink-0 self-start items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition"
         >
           <Plus className="w-4 h-4" />
           Create Routine

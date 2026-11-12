@@ -79,6 +79,7 @@ export interface ActiveWorkout {
   id: string;
   title: string;
   routineId?: string;
+  focusCue?: string;
   startTime: number;
   durationSeconds: number;
   exercises: WorkoutExercise[];
@@ -109,7 +110,13 @@ export interface CompletedWorkout {
     description: string;
     value: string;
   }[];
+  focusCue?: string;
 }
+
+export type CoachStartAction =
+  | { kind: 'target'; exerciseId: string; weight: number; reps: number }
+  | { kind: 'add-exercise'; exerciseId: string; sets: number; reps: number }
+  | { kind: 'cue'; text: string };
 
 export interface RoutineTemplate {
   id: string;
@@ -142,6 +149,7 @@ export interface UserSettings {
   vibrationEnabled: boolean;
   plateBarWeight: number; // 45 or 20
   autoStartRestTimer: boolean;
+  weeklyWorkoutTarget?: number;
   userWeight?: number; // in current weightUnit
   userHeightCm?: number; // in cm
   userExperience?: 'Beginner' | 'Intermediate' | 'Advanced';

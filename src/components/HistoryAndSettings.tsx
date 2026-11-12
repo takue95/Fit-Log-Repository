@@ -119,51 +119,36 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
-      {/* Top Navigation Tabs */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Training log</h2>
-          <p className="text-xs text-neutral-400">Workouts, exercise guides, and preferences</p>
+      {/* History header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 text-emerald-300"><History className="h-5 w-5" aria-hidden="true" /></span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-extrabold tracking-tight text-white">Training log</h2>
+            <p className="text-xs text-neutral-400">Workouts, exercise guides, and preferences</p>
+          </div>
         </div>
-
+        <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
       </div>
 
-      <div className="flex bg-neutral-900 p-1 rounded-2xl border border-neutral-800">
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'history'
-              ? 'bg-emerald-500 text-neutral-950 shadow'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          <History className="w-3.5 h-3.5" />
-          Workout History ({history.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('exercises')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'exercises'
-              ? 'bg-emerald-500 text-neutral-950 shadow'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          Exercise Guide
-        </button>
-
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'settings'
-              ? 'bg-emerald-500 text-neutral-950 shadow'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          <SettingsIcon className="w-3.5 h-3.5" />
-          Settings
-        </button>
+      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
+        {([
+          { id: 'history', label: 'Workouts', icon: History },
+          { id: 'exercises', label: 'Exercises', icon: BookOpen },
+          { id: 'settings', label: 'Settings', icon: SettingsIcon }
+        ] as const).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            aria-pressed={activeTab === id}
+            className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11px] font-bold transition whitespace-nowrap ${
+              activeTab === id ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{label}</span>
+          </button>
+        ))}
       </div>
 
       {/* TAB 1: HISTORY LOG */}
