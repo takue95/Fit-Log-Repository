@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Flame, ShieldCheck, AlertCircle, Crosshair, ChevronRight, X } from 'lucide-react';
+import { Flame, ShieldCheck, AlertCircle, ChevronRight, X } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
 import { MuscleMap } from '@musclemap/react';
 import type { MuscleGroup, MuscleMapValues } from '@musclemap/core';
@@ -34,6 +34,7 @@ interface MuscleStats {
   totalVolume: number;
   exercisesUsed: { name: string; sets: number; volume: number }[];
   lastTrainedDaysAgo: number | null;
+  latestWorkoutId: string | null;
   heatLevel: 0 | 1 | 2 | 3 | 4; // 0=cold, 1=light, 2=moderate, 3=optimal, 4=overdrive
   recoveryStatus: 'Rested' | 'Recovering' | 'Ready';
   recoveryPercent: number; // 0-100%
@@ -207,8 +208,9 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
   exercises,
   settings,
 }) => {
-  const [activeTimeRange, setActiveTimeRange] = useState<HeatMapRange>('latest');
-  const changeTimeRange = setActiveTimeRange;
+  const [overviewTimeRange, setOverviewTimeRange] = useState<HeatMapRange>('latest');
+  const [detailTimeRange, setDetailTimeRange] = useState<HeatMapRange>('latest');
+  const changeOverviewTimeRange = setOverviewTimeRange;
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>('Chest');
   const [isMuscleDetailsOpen, setIsMuscleDetailsOpen] = useState(false);
   const [hoveredMuscle, setHoveredMuscle] = useState<MuscleKey | null>(null);
@@ -217,15 +219,16 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
   const closeMuscleDetails = () => setIsMuscleDetailsOpen(false);
   const openMuscleDetails = (muscle: MuscleKey, groups?: MuscleGroup[]) => {
     setSelectedMuscle(muscle);
+    setDetailTimeRange('latest');
     setViewOrientation(groups ? viewForMapGroups(groups) : viewForMuscle(muscle));
     setHoveredMuscle(null);
     setIsMuscleDetailsOpen(true);
   };
 
-  const selectedWorkouts = useMemo(() => {
+  const overviewWorkouts = useMemo(() => {
     const now = new Date();
 
-    if (activeTimeRange === 'latest') {
+    if (overviewTimeRange === 'latest') {
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const todayWorkouts = history.filter((workout) => {
         const timestamp = new Date(workout.date).getTime();
@@ -241,27 +244,27 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     }
 
     const cutoff = new Date(now);
-    if (activeTimeRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
+    if (overviewTimeRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
     else cutoff.setDate(cutoff.getDate() - 30);
     return history.filter((workout) => {
       const timestamp = new Date(workout.date).getTime();
       return Number.isFinite(timestamp) && timestamp >= cutoff.getTime() && timestamp <= now.getTime();
     });
-  }, [history, activeTimeRange]);
+  }, [history, overviewTimeRange]);
 
-  const rangeDescription = useMemo(() => {
-    if (activeTimeRange === '7d') return 'Last 7 days';
-    if (activeTimeRange === '1m') return 'Last 30 days';
-    if (selectedWorkouts.length === 0) return 'No workouts recorded';
+  const overviewRangeDescription = useMemo(() => {
+    if (overviewTimeRange === '7d') return 'Last 7 days';
+    if (overviewTimeRange === '1m') return 'Last 30 days';
+    if (overviewWorkouts.length === 0) return 'No workouts recorded';
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    return selectedWorkouts.some((workout) => new Date(workout.date).getTime() >= startOfToday.getTime())
+    return overviewWorkouts.some((workout) => new Date(workout.date).getTime() >= startOfToday.getTime())
       ? 'Today’s workouts'
       : 'Latest recorded workout';
-  }, [selectedWorkouts, activeTimeRange]);
+  }, [overviewWorkouts, overviewTimeRange]);
 
   // Compute muscle engagement analytics
-  const muscleData = useMemo(() => {
+  const buildMuscleData = (workouts: CompletedWorkout[]) => {
     const now = Date.now();
 
     const baseMuscles: Record<MuscleKey, {
@@ -272,18 +275,19 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       totalVolume: number;
       exercisesMap: Map<string, { sets: number; volume: number }>;
       latestTimestamp: number | null;
+      latestWorkoutId: string | null;
     }> = {
-      Chest: { displayName: 'Chest (Pectorals)', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Shoulders: { displayName: 'Shoulders (Deltoids)', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Triceps: { displayName: 'Triceps Brachii', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Back: { displayName: 'Back & Lats', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Biceps: { displayName: 'Biceps Brachii', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Forearms: { displayName: 'Forearms & Grip', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Quads: { displayName: 'Quadriceps', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Hamstrings: { displayName: 'Hamstrings', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Glutes: { displayName: 'Gluteus Maximus', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Calves: { displayName: 'Calves (Gastrocnemius)', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
-      Core: { displayName: 'Abs & Obliques', category: 'Core', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null },
+      Chest: { displayName: 'Chest (Pectorals)', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Shoulders: { displayName: 'Shoulders (Deltoids)', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Triceps: { displayName: 'Triceps Brachii', category: 'Push', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Back: { displayName: 'Back & Lats', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Biceps: { displayName: 'Biceps Brachii', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Forearms: { displayName: 'Forearms & Grip', category: 'Pull', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Quads: { displayName: 'Quadriceps', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Hamstrings: { displayName: 'Hamstrings', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Glutes: { displayName: 'Gluteus Maximus', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Calves: { displayName: 'Calves (Gastrocnemius)', category: 'Legs', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
+      Core: { displayName: 'Abs & Obliques', category: 'Core', setsCount: 0, sessions: new Set(), totalVolume: 0, exercisesMap: new Map(), latestTimestamp: null, latestWorkoutId: null },
     };
 
     const resolveMuscleKey = (category: string, exName: string): MuscleKey => {
@@ -307,7 +311,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       return 'Back';
     };
 
-    selectedWorkouts.forEach((workout) => {
+    workouts.forEach((workout) => {
       const workoutTime = new Date(workout.date).getTime();
 
       workout.exercises.forEach((ex) => {
@@ -325,6 +329,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
 
         if (!target.latestTimestamp || workoutTime > target.latestTimestamp) {
           target.latestTimestamp = workoutTime;
+          target.latestWorkoutId = workout.id;
         }
 
         const existingEx = target.exercisesMap.get(ex.exerciseName) || { sets: 0, volume: 0 };
@@ -380,6 +385,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
         totalVolume: item.totalVolume,
         exercisesUsed,
         lastTrainedDaysAgo,
+        latestWorkoutId: item.latestWorkoutId,
         heatLevel,
         recoveryStatus,
         recoveryPercent
@@ -387,7 +393,49 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     });
 
     return result;
-  }, [selectedWorkouts]);
+  };
+
+  const muscleData = useMemo(() => buildMuscleData(overviewWorkouts), [overviewWorkouts]);
+  const allHistoryMuscleData = useMemo(() => buildMuscleData(history), [history]);
+
+  const latestSessionMuscleData = useMemo(() => {
+    const latest: Partial<Record<MuscleKey, MuscleStats>> = {};
+    (Object.keys(allHistoryMuscleData) as MuscleKey[]).forEach((muscle) => {
+      const workoutId = allHistoryMuscleData[muscle].latestWorkoutId;
+      const workout = workoutId ? history.find((entry) => entry.id === workoutId) : undefined;
+      if (workout) latest[muscle] = buildMuscleData([workout])[muscle];
+    });
+    return latest;
+  }, [allHistoryMuscleData, history]);
+
+  const latestMuscleWorkoutId = allHistoryMuscleData[selectedMuscle].latestWorkoutId;
+  const detailWorkouts = useMemo(() => {
+    if (detailTimeRange === 'latest') {
+      return latestMuscleWorkoutId
+        ? history.filter((workout) => workout.id === latestMuscleWorkoutId)
+        : [];
+    }
+
+    const cutoff = new Date();
+    if (detailTimeRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
+    else cutoff.setDate(cutoff.getDate() - 30);
+    return history.filter((workout) => {
+      const timestamp = new Date(workout.date).getTime();
+      return Number.isFinite(timestamp) && timestamp >= cutoff.getTime() && timestamp <= Date.now();
+    });
+  }, [detailTimeRange, history, latestMuscleWorkoutId]);
+
+  const detailRangeDescription = useMemo(() => {
+    if (detailTimeRange === '7d') return 'Last 7 days';
+    if (detailTimeRange === '1m') return 'Last 30 days';
+    if (detailWorkouts.length === 0) return 'No session recorded';
+    const date = new Date(detailWorkouts[0].date);
+    return `Latest session · ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }, [detailTimeRange, detailWorkouts]);
+
+  const detailMuscleData = useMemo(() => buildMuscleData(detailWorkouts), [detailWorkouts]);
+  const selectedDetailStats = detailMuscleData[selectedMuscle];
+  const selectedRecoveryStats = allHistoryMuscleData[selectedMuscle];
 
   const overviewMuscleMapValues = useMemo<MuscleMapValues>(() => {
     const trainedGroups = Object.entries(MAP_GROUP_TO_MUSCLE)
@@ -402,16 +450,16 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       .map(([group]) => [group, { score: 100 }]);
     return Object.fromEntries(selectedGroups) as MuscleMapValues;
   }, [selectedMuscle]);
-  const selectedStats = muscleData[selectedMuscle];
+  const selectedStats = selectedDetailStats;
   const trainedMuscleCount = Object.values(muscleData).filter((muscle) => muscle.setsCount > 0).length;
-  const totalCompletedSets = selectedWorkouts.reduce((total, workout) => total + workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).length, 0), 0);
+  const totalCompletedSets = overviewWorkouts.reduce((total, workout) => total + workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).length, 0), 0);
 
   const filteredMuscles = useMemo(() => {
-    return Object.values(muscleData).filter((m) => {
+    return Object.values(allHistoryMuscleData).filter((m) => {
       if (activeSplitFilter === 'All') return true;
       return m.category === activeSplitFilter;
     });
-  }, [muscleData, activeSplitFilter]);
+  }, [allHistoryMuscleData, activeSplitFilter]);
 
   return (
     <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-2xl flex flex-col gap-5">
@@ -489,10 +537,10 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               <button
                 key={range}
                 type="button"
-                aria-pressed={activeTimeRange === range}
-                onClick={() => changeTimeRange(range)}
+                aria-pressed={overviewTimeRange === range}
+                onClick={() => changeOverviewTimeRange(range)}
                 className={`min-h-9 rounded-lg px-1.5 text-[10px] font-bold transition sm:px-2 ${
-                  activeTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
+                  overviewTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
                 }`}
               >
                 {label}
@@ -504,11 +552,11 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-sm font-extrabold text-white">Full-body map</h4>
                 <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-200">
-                  {rangeDescription}
+                  {overviewRangeDescription}
                 </span>
               </div>
               <p className="mt-1 text-[10px] text-neutral-400">
-                {trainedMuscleCount} of 11 groups trained · {selectedWorkouts.length} {selectedWorkouts.length === 1 ? 'workout' : 'workouts'} · {totalCompletedSets} completed sets
+                {trainedMuscleCount} of 11 groups trained · {overviewWorkouts.length} {overviewWorkouts.length === 1 ? 'workout' : 'workouts'} · {totalCompletedSets} completed sets
               </p>
             </div>
           </div>
@@ -547,7 +595,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h4 className="text-sm font-extrabold text-white">Muscle group breakdown</h4>
-            <p className="text-[10px] text-neutral-400">{rangeDescription} · choose a group to open its map and training details</p>
+            <p className="text-[10px] text-neutral-400">{overviewRangeDescription} on the map · tiles preview each group’s latest session and recovery</p>
           </div>
           <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-300">Tap a tile for details <ChevronRight className="inline h-3 w-3" /></span>
         </div>
@@ -578,6 +626,8 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
           {filteredMuscles.map((muscle) => {
             const isSelected = isMuscleDetailsOpen && selectedMuscle === muscle.key;
             const isHovered = hoveredMuscle === muscle.key;
+            const latestSession = latestSessionMuscleData[muscle.key];
+            const muscleRecovery = allHistoryMuscleData[muscle.key];
 
             return (
               <button
@@ -587,7 +637,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                 onMouseEnter={() => setHoveredMuscle(muscle.key)}
                 onMouseLeave={() => setHoveredMuscle(null)}
                 aria-haspopup="dialog"
-                aria-label={`Open ${muscle.key} training details: ${muscle.setsCount} sets`}
+                aria-label={`Open ${muscle.key} muscle details. ${latestSession ? `${latestSession.setsCount} sets in the latest session` : 'No logged session'}`}
                 className={`flex min-h-[84px] w-full items-center justify-between gap-3 rounded-2xl border p-3 text-left transition group ${
                   isSelected
                     ? 'bg-neutral-900 border-emerald-500/40 shadow-md shadow-emerald-500/5'
@@ -599,10 +649,14 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                 <span className="min-w-0">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">{muscle.category}</span>
                   <span className="block truncate text-xs font-bold text-white">{muscle.key}</span>
-                  <span className="mt-1 block truncate text-[10px] font-medium text-neutral-400">
-                    {muscle.setsCount} sets <span className="text-neutral-600">·</span> {muscle.sessionsCount} {muscle.sessionsCount === 1 ? 'session' : 'sessions'}
+                  <span className="mt-1 block truncate text-[10px] font-medium text-neutral-300">
+                    {latestSession ? `${latestSession.setsCount} sets · latest session` : 'No session logged'}
                   </span>
-                  <span className="mt-1 block text-[9px] font-semibold text-emerald-300">Tap for details</span>
+                  <span className="mt-1 block text-[9px] font-semibold text-neutral-400">
+                    {muscleRecovery.lastTrainedDaysAgo !== null
+                      ? `Last trained ${muscleRecovery.lastTrainedDaysAgo === 0 ? 'today' : `${muscleRecovery.lastTrainedDaysAgo}d ago`}`
+                      : 'No training history'} <span className="text-emerald-300">· Tap for details</span>
+                  </span>
                 </span>
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-700 bg-neutral-900 text-emerald-300 transition group-hover:border-emerald-500/40 group-hover:bg-emerald-500/10" aria-hidden="true">
                   <ChevronRight className="h-4 w-4" />
@@ -630,7 +684,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               <div className="min-w-0">
                 <p className="text-[9px] font-bold uppercase tracking-[.12em] text-emerald-300">Muscle group details</p>
                 <h3 id="muscle-details-title" className="mt-1 truncate text-lg font-extrabold text-white">{selectedMuscle}</h3>
-                <p className="mt-1 text-[10px] text-neutral-400">Interactive map and training details for {rangeDescription.toLowerCase()}</p>
+                <p className="mt-1 text-[10px] text-neutral-400">{detailRangeDescription} · personal to this muscle</p>
               </div>
               <button
                 type="button"
@@ -643,37 +697,50 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
             </div>
 
             <div className="overflow-y-auto overscroll-contain p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-neutral-400">
+                    {selectedRecoveryStats.recoveryStatus === 'Ready' || selectedRecoveryStats.recoveryStatus === 'Rested'
+                      ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                      : <AlertCircle className="h-3.5 w-3.5 text-emerald-400" />}
+                    <span>Recovery · {selectedRecoveryStats.displayName}</span>
+                  </div>
+                  <p className="mt-1 truncate text-sm font-extrabold text-white">
+                    {selectedRecoveryStats.recoveryStatus}
+                    <span className="text-[10px] font-medium text-neutral-400"> · {selectedRecoveryStats.lastTrainedDaysAgo !== null
+                      ? selectedRecoveryStats.lastTrainedDaysAgo === 0 ? 'trained today' : `last trained ${selectedRecoveryStats.lastTrainedDaysAgo}d ago`
+                      : 'no training history'}</span>
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-neutral-400">
+                    {selectedStats.setsCount} completed sets · {selectedStats.sessionsCount} {selectedStats.sessionsCount === 1 ? 'session' : 'sessions'} · {selectedStats.totalVolume.toLocaleString()} {settings.weightUnit}
+                  </p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-800">
+                    <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${selectedRecoveryStats.recoveryPercent}%` }} />
+                  </div>
+                  <p className="mt-1 text-[9px] text-neutral-500">Recovery estimate · {selectedRecoveryStats.recoveryPercent}%</p>
+                </div>
+                <span className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wide ${HEAT_LEVEL_METRICS[selectedStats.heatLevel].badgeBg}`}>
+                  {HEAT_LEVEL_METRICS[selectedStats.heatLevel].shortLabel}
+                </span>
+              </div>
               <div className="grid grid-cols-3 gap-1 rounded-xl border border-neutral-800 bg-neutral-900 p-1" role="group" aria-label="Muscle detail date range">
                 {([
-                  ['latest', 'Today / latest'],
+                  ['latest', 'Latest session'],
                   ['7d', '7 days'],
                   ['1m', '1 month']
                 ] as const).map(([range, label]) => (
                   <button
                     key={range}
                     type="button"
-                    aria-pressed={activeTimeRange === range}
-                    onClick={() => changeTimeRange(range)}
+                    aria-pressed={detailTimeRange === range}
+                    onClick={() => setDetailTimeRange(range)}
                     className={`min-h-9 rounded-lg px-1.5 text-[10px] font-bold transition sm:px-2 ${
-                      activeTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
+                      detailTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
                     }`}
                   >
                     {label}
                   </button>
                 ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 py-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Crosshair className="h-4 w-4 shrink-0 text-emerald-300" />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-white">{selectedStats.displayName}</p>
-                    <p className="text-[10px] text-neutral-400">{selectedStats.setsCount} completed sets · {selectedStats.sessionsCount} {selectedStats.sessionsCount === 1 ? 'session' : 'sessions'}</p>
-                  </div>
-                </div>
-                <span className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-bold ${HEAT_LEVEL_METRICS[selectedStats.heatLevel].badgeBg}`}>
-                  {HEAT_LEVEL_METRICS[selectedStats.heatLevel].shortLabel}
-                </span>
               </div>
 
               <div className="mt-3 flex min-h-[250px] items-center justify-center rounded-2xl border border-neutral-800 bg-[#080b09] px-2 py-3">
@@ -703,45 +770,10 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
                 <p className="mt-1 text-[11px] leading-relaxed text-neutral-300">{MUSCLE_DESCRIPTIONS[selectedMuscle]}</p>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Sets</span>
-                  <span className="mt-1 block text-lg font-extrabold tabular-nums text-white">{selectedStats.setsCount}</span>
-                </div>
-                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Sessions</span>
-                  <span className="mt-1 block text-lg font-extrabold tabular-nums text-white">{selectedStats.sessionsCount}</span>
-                </div>
-                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Volume · {settings.weightUnit}</span>
-                  <span className="mt-1 block truncate text-lg font-extrabold tabular-nums text-white">{selectedStats.totalVolume.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-neutral-300">
-                    {selectedStats.recoveryStatus === 'Ready' || selectedStats.recoveryStatus === 'Rested'
-                      ? <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
-                      : <AlertCircle className="h-4 w-4 shrink-0 text-emerald-400" />}
-                    Recovery status · <strong className="text-white">{selectedStats.recoveryStatus}</strong>
-                  </span>
-                  <span className="shrink-0 text-xs font-bold tabular-nums text-emerald-300">{selectedStats.recoveryPercent}%</span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-800">
-                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${selectedStats.recoveryPercent}%` }} />
-                </div>
-                <p className="mt-2 text-[10px] text-neutral-400">
-                  {selectedStats.lastTrainedDaysAgo !== null
-                    ? `Last stimulated ${selectedStats.lastTrainedDaysAgo === 0 ? 'today' : `${selectedStats.lastTrainedDaysAgo} day(s) ago`}`
-                    : `No direct work during ${rangeDescription.toLowerCase()}`}
-                </p>
-              </div>
-
               <div className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-3.5">
                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Contributing exercises</h4>
                 {selectedStats.exercisesUsed.length === 0 ? (
-                  <p className="mt-2 rounded-xl border border-dashed border-neutral-700 p-3 text-center text-[11px] text-neutral-400">No sets logged for {selectedMuscle} during {rangeDescription.toLowerCase()}.</p>
+                  <p className="mt-2 rounded-xl border border-dashed border-neutral-700 p-3 text-center text-[11px] text-neutral-400">No sets logged for {selectedMuscle} during {detailRangeDescription.toLowerCase()}.</p>
                 ) : (
                   <div className="mt-2 space-y-1.5">
                     {selectedStats.exercisesUsed.map((exercise, index) => (
