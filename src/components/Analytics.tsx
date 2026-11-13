@@ -24,7 +24,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   const [selectedPRCompound, setSelectedPRCompound] = useState<string>('barbell-bench-press');
   const [progressionRange, setProgressionRange] = useState<'3M' | '6M' | '12M' | 'All'>('6M');
   const [selectedProgressPoint, setSelectedProgressPoint] = useState<string | null>(null);
-  const [selectedTrainingRange, setSelectedTrainingRange] = useState<'latest' | '7d' | '1m'>('latest');
 
   // Big compounds for 1RM curve
   const trackedCompounds = [
@@ -155,36 +154,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     ...(progressionRange === 'All' || rangeWindow && rangeWindow.start.getFullYear() !== new Date(rangeWindow.end.getTime() - 1).getFullYear() ? { year: 'numeric' as const } : {})
   });
 
-  const selectedTrainingWorkouts = React.useMemo(() => {
-    const now = new Date();
-    if (selectedTrainingRange === 'latest') {
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const todayWorkouts = history.filter((workout) => {
-        const timestamp = new Date(workout.date).getTime();
-        return Number.isFinite(timestamp) && timestamp >= startOfToday && timestamp <= now.getTime();
-      });
-      if (todayWorkouts.length) return todayWorkouts;
-      const latestWorkout = history.reduce<CompletedWorkout | null>((latest, workout) => {
-        if (!Number.isFinite(new Date(workout.date).getTime())) return latest;
-        return !latest || new Date(workout.date).getTime() > new Date(latest.date).getTime() ? workout : latest;
-      }, null);
-      return latestWorkout ? [latestWorkout] : [];
-    }
-    const cutoff = new Date(now);
-    if (selectedTrainingRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
-    else cutoff.setDate(cutoff.getDate() - 30);
-    return history.filter((workout) => {
-      const timestamp = new Date(workout.date).getTime();
-      return Number.isFinite(timestamp) && timestamp >= cutoff.getTime() && timestamp <= now.getTime();
-    });
-  }, [history, selectedTrainingRange]);
-
-  const trainingOverview = React.useMemo(() => selectedTrainingWorkouts.reduce((totals, workout) => ({
-    sessions: totals.sessions + 1,
-    sets: totals.sets + workout.totalSets,
-    volume: totals.volume + workout.totalVolume
-  }), { sessions: 0, sets: 0, volume: 0 }), [selectedTrainingWorkouts]);
-
   const weeklyVolumeBars = React.useMemo(() => {
     const today = new Date();
     const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -249,36 +218,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           <h2 className="text-xl font-extrabold text-white tracking-tight">Progress</h2>
           <p className="text-xs text-neutral-400">Your training, connected in one view</p>
         </div>
-        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-950 p-1" role="group" aria-label="Workout period">
-          {([
-            ['latest', 'Latest / Today'],
-            ['7d', '7 Days'],
-            ['1m', '1 Month']
-          ] as const).map(([range, label]) => (
-            <button
-              key={range}
-              type="button"
-              aria-pressed={selectedTrainingRange === range}
-              onClick={() => setSelectedTrainingRange(range)}
-              className={`rounded-xl px-2 py-2.5 text-[10px] font-bold transition ${selectedTrainingRange === range ? 'bg-emerald-400 text-neutral-950 shadow-sm' : 'text-neutral-400 hover:text-white'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: 'Sessions', value: trainingOverview.sessions.toString(), detail: 'in this period' },
-            { label: 'Working sets', value: trainingOverview.sets.toString(), detail: 'completed' },
-            { label: 'Volume', value: trainingOverview.volume >= 10000 ? `${(trainingOverview.volume / 1000).toFixed(1)}k` : trainingOverview.volume.toLocaleString(), detail: settings.weightUnit }
-          ].map((metric) => (
-            <div key={metric.label} className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
-              <span className="block truncate text-[9px] font-bold uppercase tracking-wide text-neutral-400">{metric.label}</span>
-              <span className="mt-2 block truncate text-xl font-extrabold tabular-nums text-white">{metric.value}</span>
-              <span className="mt-1 block truncate text-[9px] text-neutral-500">{metric.detail}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Interactive muscle map follows the shared workout period */}
@@ -286,7 +225,6 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         history={history}
         exercises={exercises}
         settings={settings}
-        timeRange={selectedTrainingRange}
       />
 
       {/* One weekly workload trend combines training volume and consistency */}

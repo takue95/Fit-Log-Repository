@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Flame, ShieldCheck, AlertCircle, Crosshair, Layers } from 'lucide-react';
+import { Flame, ShieldCheck, AlertCircle, Crosshair, ChevronRight, X } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings } from '../types/fitness';
 import { MuscleMap } from '@musclemap/react';
 import type { MuscleGroup, MuscleMapValues } from '@musclemap/core';
@@ -8,7 +8,6 @@ interface MuscleEngagementHeatmapProps {
   history: CompletedWorkout[];
   exercises: Exercise[];
   settings: UserSettings;
-  timeRange?: HeatMapRange;
 }
 
 export type MuscleKey = 
@@ -39,6 +38,21 @@ interface MuscleStats {
   recoveryStatus: 'Rested' | 'Recovering' | 'Ready';
   recoveryPercent: number; // 0-100%
 }
+
+
+const MUSCLE_DESCRIPTIONS: Record<MuscleKey, string> = {
+  Chest: 'The pectorals support pressing and pushing movements, including bench presses, push-ups and chest presses.',
+  Back: 'The back includes the lats, traps and mid-back muscles used for pulling, rowing and keeping the torso stable.',
+  Shoulders: 'The deltoids help raise and control the arms during presses, raises and many upper-body movements.',
+  Quads: 'The quadriceps straighten the knee and drive the upward phase of squats, lunges and leg presses.',
+  Hamstrings: 'The hamstrings bend the knee and extend the hip during hinges, curls and sprinting movements.',
+  Glutes: 'The glutes extend and stabilize the hips during squats, hinges, lunges and hip thrusts.',
+  Biceps: 'The biceps bend the elbow and assist with pulling movements such as curls and rows.',
+  Forearms: 'The forearms support grip strength and control the wrists during lifting and carrying.',
+  Triceps: 'The triceps straighten the elbow and contribute to presses, push-downs and overhead extensions.',
+  Core: 'The core muscles brace and stabilize the trunk during lifts, carries and controlled movement.',
+  Calves: 'The calf muscles point the foot and support ankle strength during raises, jumps and walking.'
+};
 
 const HEAT_LEVEL_METRICS = {
   0: {
@@ -192,23 +206,26 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
   history,
   exercises,
   settings,
-  timeRange = 'latest'
 }) => {
+  const [activeTimeRange, setActiveTimeRange] = useState<HeatMapRange>('latest');
+  const changeTimeRange = setActiveTimeRange;
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>('Chest');
+  const [isMuscleDetailsOpen, setIsMuscleDetailsOpen] = useState(false);
   const [hoveredMuscle, setHoveredMuscle] = useState<MuscleKey | null>(null);
   const [activeSplitFilter, setActiveSplitFilter] = useState<'All' | 'Push' | 'Pull' | 'Legs' | 'Core'>('All');
-  const [viewOrientation, setViewOrientation] = useState<MuscleMapView>(() => viewForMuscle('Chest'));
-
-  const selectMuscle = (muscle: MuscleKey, view: MuscleMapView = viewForMuscle(muscle)) => {
+  const [viewOrientation, setViewOrientation] = useState<MuscleMapView>('both');
+  const closeMuscleDetails = () => setIsMuscleDetailsOpen(false);
+  const openMuscleDetails = (muscle: MuscleKey, groups?: MuscleGroup[]) => {
     setSelectedMuscle(muscle);
-    setViewOrientation(view);
+    setViewOrientation(groups ? viewForMapGroups(groups) : viewForMuscle(muscle));
     setHoveredMuscle(null);
+    setIsMuscleDetailsOpen(true);
   };
 
   const selectedWorkouts = useMemo(() => {
     const now = new Date();
 
-    if (timeRange === 'latest') {
+    if (activeTimeRange === 'latest') {
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const todayWorkouts = history.filter((workout) => {
         const timestamp = new Date(workout.date).getTime();
@@ -224,24 +241,24 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     }
 
     const cutoff = new Date(now);
-    if (timeRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
+    if (activeTimeRange === '7d') cutoff.setDate(cutoff.getDate() - 7);
     else cutoff.setDate(cutoff.getDate() - 30);
     return history.filter((workout) => {
       const timestamp = new Date(workout.date).getTime();
       return Number.isFinite(timestamp) && timestamp >= cutoff.getTime() && timestamp <= now.getTime();
     });
-  }, [history, timeRange]);
+  }, [history, activeTimeRange]);
 
   const rangeDescription = useMemo(() => {
-    if (timeRange === '7d') return 'Last 7 days';
-    if (timeRange === '1m') return 'Last 30 days';
+    if (activeTimeRange === '7d') return 'Last 7 days';
+    if (activeTimeRange === '1m') return 'Last 30 days';
     if (selectedWorkouts.length === 0) return 'No workouts recorded';
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     return selectedWorkouts.some((workout) => new Date(workout.date).getTime() >= startOfToday.getTime())
       ? 'Today’s workouts'
       : 'Latest recorded workout';
-  }, [selectedWorkouts, timeRange]);
+  }, [selectedWorkouts, activeTimeRange]);
 
   // Compute muscle engagement analytics
   const muscleData = useMemo(() => {
@@ -372,12 +389,22 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
     return result;
   }, [selectedWorkouts]);
 
+  const overviewMuscleMapValues = useMemo<MuscleMapValues>(() => {
+    const trainedGroups = Object.entries(MAP_GROUP_TO_MUSCLE)
+      .filter(([, muscle]) => muscleData[muscle].setsCount > 0)
+      .map(([group]) => [group, { score: 100 }]);
+    return Object.fromEntries(trainedGroups) as MuscleMapValues;
+  }, [muscleData]);
+
   const selectedMuscleMapValues = useMemo<MuscleMapValues>(() => {
     const selectedGroups = Object.entries(MAP_GROUP_TO_MUSCLE)
       .filter(([, muscle]) => muscle === selectedMuscle)
       .map(([group]) => [group, { score: 100 }]);
     return Object.fromEntries(selectedGroups) as MuscleMapValues;
   }, [selectedMuscle]);
+  const selectedStats = muscleData[selectedMuscle];
+  const trainedMuscleCount = Object.values(muscleData).filter((muscle) => muscle.setsCount > 0).length;
+  const totalCompletedSets = selectedWorkouts.reduce((total, workout) => total + workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).length, 0), 0);
 
   const filteredMuscles = useMemo(() => {
     return Object.values(muscleData).filter((m) => {
@@ -385,9 +412,6 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
       return m.category === activeSplitFilter;
     });
   }, [muscleData, activeSplitFilter]);
-
-  const selectedStats = muscleData[selectedMuscle];
-  const activeFocusMuscle = hoveredMuscle ? muscleData[hoveredMuscle] : selectedStats;
 
   return (
     <div className="rounded-3xl bg-neutral-900 border border-neutral-800 p-5 shadow-2xl flex flex-col gap-5">
@@ -409,7 +433,7 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               </span>
             </div>
             <p className="text-xs text-neutral-400">
-              Select a muscle to see its training details
+              Choose a period above, then tap a muscle for details
             </p>
           </div>
         </div>
@@ -453,27 +477,45 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
         </div>
       </div>
 
-      {/* Main Heatmap Stage */}
-      <div className="flex flex-col gap-5 items-stretch">
-        {/* MuscleMap male anatomy heat map */}
-        <div className="bg-neutral-950 rounded-2xl border border-neutral-800/90 p-4 flex flex-col gap-3 relative shadow-inner">
-          <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-800/80">
-            <div className="flex items-center gap-2 min-w-0">
-              <Crosshair className="w-4 h-4 text-emerald-400 shrink-0" />
-              <div className="min-w-0 text-xs">
-                <span className="font-bold text-white">{selectedStats.displayName}</span>
-                <span className="text-neutral-500"> · </span>
-                <span className="text-neutral-400">{selectedStats.setsCount} completed sets</span>
+      {/* Full period overview map */}
+      <section className="flex flex-col gap-4" aria-label="Muscle engagement overview">
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-inner">
+          <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl border border-neutral-800 bg-neutral-900 p-1" role="group" aria-label="Muscle map date range">
+            {([
+              ['latest', 'Today / latest'],
+              ['7d', '7 days'],
+              ['1m', '1 month']
+            ] as const).map(([range, label]) => (
+              <button
+                key={range}
+                type="button"
+                aria-pressed={activeTimeRange === range}
+                onClick={() => changeTimeRange(range)}
+                className={`min-h-9 rounded-lg px-1.5 text-[10px] font-bold transition sm:px-2 ${
+                  activeTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-sm font-extrabold text-white">Full-body map</h4>
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-200">
+                  {rangeDescription}
+                </span>
               </div>
+              <p className="mt-1 text-[10px] text-neutral-400">
+                {trainedMuscleCount} of 11 groups trained · {selectedWorkouts.length} {selectedWorkouts.length === 1 ? 'workout' : 'workouts'} · {totalCompletedSets} completed sets
+              </p>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${HEAT_LEVEL_METRICS[selectedStats.heatLevel].badgeBg}`}>
-              {HEAT_LEVEL_METRICS[selectedStats.heatLevel].shortLabel}
-            </span>
           </div>
 
-          <div className="flex min-h-[300px] items-center justify-center py-2">
+          <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-neutral-800/80 bg-[#080b09] px-2 py-3 sm:min-h-[350px]">
             <MuscleMap
-              values={selectedMuscleMapValues}
+              values={overviewMuscleMapValues}
               sex="MALE"
               view={viewOrientation === 'both' ? 'BOTH' : viewOrientation === 'front' ? 'FRONT' : 'BACK'}
               monochromeColor="#4fbd80"
@@ -482,145 +524,36 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
               showLegend={false}
               tooltipFields={[]}
               labels={MUSCLE_MAP_LABELS}
-              figureWidth={220}
+              figureWidth={250}
               onSelectMuscle={({ group }) => {
                 const muscle = MAP_GROUP_TO_MUSCLE[group];
-                if (muscle) selectMuscle(muscle, viewForMapGroups([group]));
+                if (muscle) openMuscleDetails(muscle, [group]);
               }}
               className={`muscle-map-figures ${viewOrientation === 'both' ? 'paired-view' : 'single-view'}`}
               style={{ width: '100%' }}
             />
           </div>
 
-          <div className="pt-3 border-t border-neutral-800/80 flex flex-col gap-2">
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Muscle focus</span>
-              <span>Tap a muscle to inspect</span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px] text-neutral-400">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" aria-hidden="true" />
-              <span>Selected muscle</span>
-              <span className="ml-auto h-2.5 w-2.5 rounded-full bg-[#515459]" aria-hidden="true" />
-              <span>Other muscles</span>
-            </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-800 pt-3 text-[10px] text-neutral-400">
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />Trained in this period</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#515459]" />No sets in this period</span>
+            <span className="w-full text-neutral-500 sm:w-auto">Tap a highlighted muscle or a group below for more detail</span>
           </div>
-        </div>
-        {/* Selected Muscle Diagnostic Panel & Exercises */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 shadow-xl flex flex-col gap-3">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800/80">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                  Target Group Diagnostic
-                </span>
-                <h4 className="text-base font-extrabold text-white">
-                  {selectedStats.displayName}
-                </h4>
-              </div>
-
-              <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${HEAT_LEVEL_METRICS[selectedStats.heatLevel].badgeBg}`}>
-                {HEAT_LEVEL_METRICS[selectedStats.heatLevel].shortLabel}
-              </span>
-            </div>
-
-            {/* Metric Counters */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-neutral-900/90 p-2 rounded-xl border border-neutral-800 min-w-0">
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-neutral-400 block">Sets</span>
-                <span className="text-lg font-extrabold font-mono text-neutral-400 tabular-nums">
-                  {selectedStats.setsCount}
-                </span>
-              </div>
-              <div className="bg-neutral-900/90 p-2 rounded-xl border border-neutral-800 min-w-0">
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-neutral-400 block">Sessions</span>
-                <span className="text-lg font-extrabold font-mono text-white tabular-nums">
-                  {selectedStats.sessionsCount}
-                </span>
-              </div>
-              <div className="bg-neutral-900/90 p-2 rounded-xl border border-neutral-800 min-w-0">
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-neutral-400 block">Volume</span>
-                <span className="text-base sm:text-lg font-extrabold font-mono text-white tabular-nums truncate block">
-                  {selectedStats.totalVolume.toLocaleString()}
-                </span>
-                <span className="text-[9px] text-neutral-400 font-normal">{settings.weightUnit}</span>
-              </div>
-            </div>
-
-            {/* Recovery Status Bar */}
-            <div className="p-3 bg-neutral-900/80 rounded-xl border border-neutral-800/80 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-neutral-300 flex items-center gap-1.5">
-                  {selectedStats.recoveryStatus === 'Ready' || selectedStats.recoveryStatus === 'Rested' ? (
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-emerald-400" />
-                  )}
-                  Recovery Status: <span className="font-bold text-white">{selectedStats.recoveryStatus}</span>
-                </span>
-                <span className="font-mono text-xs font-bold text-emerald-400 tabular-nums">
-                  {selectedStats.recoveryPercent}%
-                </span>
-              </div>
-              <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-300"
-                  style={{ width: `${selectedStats.recoveryPercent}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-neutral-400">
-                {selectedStats.lastTrainedDaysAgo !== null
-                  ? `Last stimulated ${selectedStats.lastTrainedDaysAgo === 0 ? 'today' : `${selectedStats.lastTrainedDaysAgo} day(s) ago`}`
-                  : `Untrained during ${rangeDescription.toLowerCase()}`}
-              </span>
-            </div>
-
-            {/* Exercises Logged for this Muscle Group */}
-            <div className="flex flex-col gap-1.5 pt-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                Contributing Exercises ({selectedStats.exercisesUsed.length})
-              </span>
-              {selectedStats.exercisesUsed.length === 0 ? (
-                <div className="p-3 bg-neutral-900/50 rounded-xl border border-dashed border-neutral-800 text-center text-xs text-neutral-500 italic">
-                  No sets logged for {selectedMuscle} during {rangeDescription.toLowerCase()}.
-                </div>
-              ) : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  {selectedStats.exercisesUsed.map((ex, i) => (
-                    <div
-                      key={i}
-                      className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800/80 flex items-center justify-between text-xs"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <span className="font-bold text-white truncate block">{ex.name}</span>
-                        <span className="text-[10px] text-neutral-400 tabular-nums">{ex.sets} completed sets</span>
-                      </div>
-                      <span className="font-mono font-bold text-neutral-400 text-[11px] shrink-0 tabular-nums">
-                        {ex.volume.toLocaleString()} {settings.weightUnit}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Muscle group breakdown uses the shared Progress period */}
-      <section className="flex flex-col gap-3 border-t border-neutral-800 pt-4" aria-label="Muscle group breakdown">
-        <div>
-          <h4 className="text-sm font-extrabold text-white">Muscle group breakdown</h4>
-          <p className="text-[10px] text-neutral-400">{rangeDescription} · tap a group to inspect it above</p>
         </div>
       </section>
 
       {/* Muscle Group Engagement Matrix Grid */}
+      <section aria-label="Muscle group breakdown" className="flex flex-col gap-3 border-t border-neutral-800 pt-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h4 className="text-sm font-extrabold text-white">Muscle group breakdown</h4>
+            <p className="text-[10px] text-neutral-400">{rangeDescription} · choose a group to open its map and training details</p>
+          </div>
+          <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-300">Tap a tile for details <ChevronRight className="inline h-3 w-3" /></span>
+        </div>
       <div className="flex flex-col gap-3 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-neutral-400" />
-            All muscle groups
-          </h4>
+          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-neutral-500">Filter groups</span>
 
           {/* Category Filter */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
@@ -643,66 +576,191 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
         {/* Matrix Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
           {filteredMuscles.map((muscle) => {
-            const isSelected = selectedMuscle === muscle.key;
+            const isSelected = isMuscleDetailsOpen && selectedMuscle === muscle.key;
             const isHovered = hoveredMuscle === muscle.key;
-            const metric = HEAT_LEVEL_METRICS[muscle.heatLevel];
 
             return (
-              <div
+              <button
                 key={muscle.key}
-                onClick={() => selectMuscle(muscle.key)}
+                type="button"
+                onClick={() => openMuscleDetails(muscle.key)}
                 onMouseEnter={() => setHoveredMuscle(muscle.key)}
                 onMouseLeave={() => setHoveredMuscle(null)}
-                className={`p-3 rounded-2xl border transition cursor-pointer flex flex-col justify-between gap-2 group ${
+                aria-haspopup="dialog"
+                aria-label={`Open ${muscle.key} training details: ${muscle.setsCount} sets`}
+                className={`flex min-h-[84px] w-full items-center justify-between gap-3 rounded-2xl border p-3 text-left transition group ${
                   isSelected
-                    ? 'bg-neutral-900 border-neutral-500 shadow-md shadow-neutral-500/10'
+                    ? 'bg-neutral-900 border-emerald-500/40 shadow-md shadow-emerald-500/5'
                     : isHovered
-                    ? 'bg-neutral-900/90 border-neutral-500/50'
-                    : 'bg-neutral-950/80 border-neutral-800/80 hover:border-neutral-700 hover:bg-neutral-900/60'
+                    ? 'bg-neutral-900/90 border-neutral-600/70'
+                    : 'bg-neutral-950/80 border-neutral-800/80 hover:border-neutral-600 hover:bg-neutral-900/60'
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                      {muscle.category}
-                    </span>
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: metric.stroke }}
-                      title={metric.label}
-                    />
-                  </div>
-                  <h5 className="text-xs font-bold text-white group-hover:text-neutral-400 transition truncate">
-                    {muscle.key}
-                  </h5>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between font-mono">
-                    <span className="text-sm font-extrabold text-neutral-400 tabular-nums">
-                      {muscle.setsCount}{' '}
-                      <span className="text-[10px] font-normal text-neutral-400">sets</span>
-                    </span>
-                    <span className="text-[10px] text-neutral-400 tabular-nums">
-                      {muscle.lastTrainedDaysAgo !== null ? `${muscle.lastTrainedDaysAgo}d ago` : '—'}
-                    </span>
-                  </div>
-
-                  {/* Volume progress bar */}
-                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, (muscle.setsCount / 12) * 100)}%`,
-                        backgroundColor: metric.stroke
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+                <span className="min-w-0">
+                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-neutral-500">{muscle.category}</span>
+                  <span className="block truncate text-xs font-bold text-white">{muscle.key}</span>
+                  <span className="mt-1 block truncate text-[10px] font-medium text-neutral-400">
+                    {muscle.setsCount} sets <span className="text-neutral-600">·</span> {muscle.sessionsCount} {muscle.sessionsCount === 1 ? 'session' : 'sessions'}
+                  </span>
+                  <span className="mt-1 block text-[9px] font-semibold text-emerald-300">Tap for details</span>
+                </span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-700 bg-neutral-900 text-emerald-300 transition group-hover:border-emerald-500/40 group-hover:bg-emerald-500/10" aria-hidden="true">
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              </button>
             );
           })}
         </div>
+      </div>
+      </section>
+
+      {isMuscleDetailsOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5"
+          onClick={closeMuscleDetails}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="muscle-details-title"
+            className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-neutral-700 bg-neutral-950 shadow-2xl sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-neutral-800 px-4 py-4 sm:px-5">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-[.12em] text-emerald-300">Muscle group details</p>
+                <h3 id="muscle-details-title" className="mt-1 truncate text-lg font-extrabold text-white">{selectedMuscle}</h3>
+                <p className="mt-1 text-[10px] text-neutral-400">Interactive map and training details for {rangeDescription.toLowerCase()}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeMuscleDetails}
+                aria-label="Close muscle details"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-neutral-800 bg-neutral-900 text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto overscroll-contain p-4 sm:p-5">
+              <div className="grid grid-cols-3 gap-1 rounded-xl border border-neutral-800 bg-neutral-900 p-1" role="group" aria-label="Muscle detail date range">
+                {([
+                  ['latest', 'Today / latest'],
+                  ['7d', '7 days'],
+                  ['1m', '1 month']
+                ] as const).map(([range, label]) => (
+                  <button
+                    key={range}
+                    type="button"
+                    aria-pressed={activeTimeRange === range}
+                    onClick={() => changeTimeRange(range)}
+                    className={`min-h-9 rounded-lg px-1.5 text-[10px] font-bold transition sm:px-2 ${
+                      activeTimeRange === range ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Crosshair className="h-4 w-4 shrink-0 text-emerald-300" />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-white">{selectedStats.displayName}</p>
+                    <p className="text-[10px] text-neutral-400">{selectedStats.setsCount} completed sets · {selectedStats.sessionsCount} {selectedStats.sessionsCount === 1 ? 'session' : 'sessions'}</p>
+                  </div>
+                </div>
+                <span className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-bold ${HEAT_LEVEL_METRICS[selectedStats.heatLevel].badgeBg}`}>
+                  {HEAT_LEVEL_METRICS[selectedStats.heatLevel].shortLabel}
+                </span>
+              </div>
+
+              <div className="mt-3 flex min-h-[250px] items-center justify-center rounded-2xl border border-neutral-800 bg-[#080b09] px-2 py-3">
+                <MuscleMap
+                  values={selectedMuscleMapValues}
+                  sex="MALE"
+                  view={viewOrientation === 'both' ? 'BOTH' : viewOrientation === 'front' ? 'FRONT' : 'BACK'}
+                  monochromeColor="#4fbd80"
+                  monochromeBaseColor="#515459"
+                  glow={false}
+                  showLegend={false}
+                  tooltipFields={[]}
+                  labels={MUSCLE_MAP_LABELS}
+                  figureWidth={235}
+                  onSelectMuscle={({ group }) => {
+                    const muscle = MAP_GROUP_TO_MUSCLE[group];
+                    if (muscle) openMuscleDetails(muscle, [group]);
+                  }}
+                  className={`muscle-map-figures ${viewOrientation === 'both' ? 'paired-view' : 'single-view'}`}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-3.5">
+                <p className="text-[9px] font-bold uppercase tracking-[.12em] text-emerald-300">Target group</p>
+                <h4 className="mt-1 text-sm font-extrabold text-white">{selectedStats.displayName}</h4>
+                <p className="mt-1 text-[11px] leading-relaxed text-neutral-300">{MUSCLE_DESCRIPTIONS[selectedMuscle]}</p>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Sets</span>
+                  <span className="mt-1 block text-lg font-extrabold tabular-nums text-white">{selectedStats.setsCount}</span>
+                </div>
+                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Sessions</span>
+                  <span className="mt-1 block text-lg font-extrabold tabular-nums text-white">{selectedStats.sessionsCount}</span>
+                </div>
+                <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+                  <span className="block truncate text-[9px] font-bold uppercase text-neutral-500">Volume · {settings.weightUnit}</span>
+                  <span className="mt-1 block truncate text-lg font-extrabold tabular-nums text-white">{selectedStats.totalVolume.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-neutral-300">
+                    {selectedStats.recoveryStatus === 'Ready' || selectedStats.recoveryStatus === 'Rested'
+                      ? <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                      : <AlertCircle className="h-4 w-4 shrink-0 text-emerald-400" />}
+                    Recovery status · <strong className="text-white">{selectedStats.recoveryStatus}</strong>
+                  </span>
+                  <span className="shrink-0 text-xs font-bold tabular-nums text-emerald-300">{selectedStats.recoveryPercent}%</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-800">
+                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${selectedStats.recoveryPercent}%` }} />
+                </div>
+                <p className="mt-2 text-[10px] text-neutral-400">
+                  {selectedStats.lastTrainedDaysAgo !== null
+                    ? `Last stimulated ${selectedStats.lastTrainedDaysAgo === 0 ? 'today' : `${selectedStats.lastTrainedDaysAgo} day(s) ago`}`
+                    : `No direct work during ${rangeDescription.toLowerCase()}`}
+                </p>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-3.5">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Contributing exercises</h4>
+                {selectedStats.exercisesUsed.length === 0 ? (
+                  <p className="mt-2 rounded-xl border border-dashed border-neutral-700 p-3 text-center text-[11px] text-neutral-400">No sets logged for {selectedMuscle} during {rangeDescription.toLowerCase()}.</p>
+                ) : (
+                  <div className="mt-2 space-y-1.5">
+                    {selectedStats.exercisesUsed.map((exercise, index) => (
+                      <div key={`${exercise.name}-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-neutral-950 px-3 py-2">
+                        <span className="min-w-0">
+                          <strong className="block truncate text-[11px] text-white">{exercise.name}</strong>
+                          <span className="text-[9px] text-neutral-400">{exercise.sets} completed sets</span>
+                        </span>
+                        <span className="shrink-0 text-[10px] font-semibold tabular-nums text-neutral-300">{exercise.volume.toLocaleString()} {settings.weightUnit}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button type="button" onClick={closeMuscleDetails} className="mt-3 min-h-10 w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-neutral-950 transition hover:bg-emerald-400">Close details</button>
+            </div>
+          </section>
+        </div>
+      )}
       </div>
     </div>
   );
