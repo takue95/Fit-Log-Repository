@@ -761,7 +761,6 @@ export const MuscleEngagementHeatmap: React.FC<MuscleEngagementHeatmapProps> = (
           </section>
         </div>
       )}
-      </div>
     </div>
   );
 };
