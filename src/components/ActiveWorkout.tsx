@@ -692,7 +692,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                 </div>
               </div>
 
-              {exercise.exerciseName.trim().toLowerCase() === 'barbell bench press' && (
+              {(exercise.exerciseId === 'barbell-bench-press' || exercise.exerciseName.trim().toLowerCase() === 'barbell bench press') && (
                 <div className="border-b border-neutral-800/80">
                   <button
                     type="button"
