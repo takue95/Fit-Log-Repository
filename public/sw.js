@@ -1,4 +1,4 @@
-const CACHE = 'fitlog-shell-v8';
+const CACHE = 'fitlog-shell-v9';
 const BASE = self.registration.scope;
 const APP_SHELL = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`, `${BASE}fitlog-icon.svg`];
 self.addEventListener('install', (event) => {
@@ -11,6 +11,10 @@ self.addEventListener('activate', (event) => {
 });
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+  if (new URL(event.request.url).pathname.includes('/videos/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   event.respondWith(fetch(event.request, { cache: event.request.mode === 'navigate' ? 'no-store' : 'default' }).then((response) => {
     if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
     return response;
