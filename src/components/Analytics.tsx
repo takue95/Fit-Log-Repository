@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Trophy, BarChart3 } from 'lucide-react';
+import { TrendingUp, Trophy, BarChart3, Pencil, Check, X } from 'lucide-react';
 import { CompletedWorkout, BodyWeightEntry, UserSettings, Exercise } from '../types/fitness';
 import { calculate1RM } from '../utils/fitnessCalc';
 import { MuscleEngagementHeatmap } from './MuscleEngagementHeatmap';
@@ -11,6 +11,7 @@ interface AnalyticsProps {
   exercises: Exercise[];
   settings: UserSettings;
   onAddBodyWeight: (weight: number, date: string) => void;
+  onUpdateBodyWeight: (id: string, weight: number, date: string) => void;
   onOpenOneRMCalc: () => void;
 }
 
@@ -19,11 +20,29 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   bodyWeights,
   exercises,
   settings,
+  onUpdateBodyWeight,
   onOpenOneRMCalc
 }) => {
   const [selectedPRCompound, setSelectedPRCompound] = useState<string>('barbell-bench-press');
   const [progressionRange, setProgressionRange] = useState<'3M' | '6M' | '12M' | 'All'>('6M');
   const [selectedProgressPoint, setSelectedProgressPoint] = useState<string | null>(null);
+  const [showBodyweightLogs, setShowBodyweightLogs] = useState(false);
+  const [editingBodyweightId, setEditingBodyweightId] = useState<string | null>(null);
+  const [bodyweightDraft, setBodyweightDraft] = useState({ weight: '', date: '' });
+
+  const startEditingBodyweight = (entry: BodyWeightEntry) => {
+    setEditingBodyweightId(entry.id);
+    setBodyweightDraft({ weight: String(entry.weight), date: entry.date.slice(0, 10) });
+  };
+
+  const saveBodyweightEdit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingBodyweightId || !bodyweightDraft.date) return;
+    const value = Number(bodyweightDraft.weight.trim().replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) return;
+    onUpdateBodyWeight(editingBodyweightId, value, bodyweightDraft.date);
+    setEditingBodyweightId(null);
+  };
 
   // Big compounds for 1RM curve
   const trackedCompounds = [
@@ -275,6 +294,66 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
           )}
         </div>
         <TrendLineChart points={bodyweightPoints} unit={settings.weightUnit} label="Bodyweight" latestPointColor="#4fbd80" />
+        {bodyWeights.length > 0 && (
+          <div className="mt-3 border-t border-neutral-800 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowBodyweightLogs((show) => !show)}
+              aria-expanded={showBodyweightLogs}
+              className="flex w-full items-center justify-between gap-2 text-left text-[11px] font-semibold text-emerald-300"
+            >
+              <span>{showBodyweightLogs ? 'Hide' : 'Manage'} weigh-in logs <span className="text-neutral-500">· {bodyWeights.length}</span></span>
+              <span className="text-neutral-500">{showBodyweightLogs ? '−' : '+'}</span>
+            </button>
+            {showBodyweightLogs && (
+              <div className="mt-2 divide-y divide-neutral-800/80">
+                {[...sortedBodyWeights].reverse().map((entry) => (
+                  <div key={entry.id} className="py-2.5 first:pt-1 last:pb-0">
+                    {editingBodyweightId === entry.id ? (
+                      <form
+                        onSubmit={saveBodyweightEdit}
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-center gap-1.5"
+                      >
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={bodyweightDraft.weight}
+                          onFocus={(event) => event.currentTarget.select()}
+                          onChange={(event) => setBodyweightDraft((draft) => ({ ...draft, weight: event.target.value }))}
+                          aria-label="Corrected bodyweight"
+                          className="numeric-entry min-w-0 rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[11px] text-white outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="date"
+                          value={bodyweightDraft.date}
+                          onChange={(event) => setBodyweightDraft((draft) => ({ ...draft, date: event.target.value }))}
+                          aria-label="Weigh-in date"
+                          className="min-w-0 rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] text-white outline-none focus:border-emerald-500"
+                        />
+                        <button type="submit" className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500 text-neutral-950" aria-label="Save weigh-in correction">
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button type="button" onClick={() => setEditingBodyweightId(null)} className="grid h-8 w-8 place-items-center rounded-lg border border-neutral-700 text-neutral-400" aria-label="Cancel weigh-in edit">
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="block text-[11px] font-semibold tabular-nums text-white">{entry.weight.toFixed(1)} {settings.weightUnit}</span>
+                          <span className="block text-[9px] text-neutral-500">{new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                        <button type="button" onClick={() => startEditingBodyweight(entry)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[10px] font-semibold text-neutral-300 hover:border-emerald-500/50 hover:text-emerald-300">
+                          <Pencil className="h-3 w-3" aria-hidden="true" /> Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Compact personal bests */}

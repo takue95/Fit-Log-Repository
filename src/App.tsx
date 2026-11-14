@@ -581,6 +581,12 @@ export default function App() {
     setBodyWeights((prev) => [newEntry, ...prev]);
   };
 
+  const handleUpdateBodyWeight = (id: string, weight: number, date: string) => {
+    setBodyWeights((prev) => prev.map((entry) =>
+      entry.id === id ? { ...entry, weight, date } : entry
+    ));
+  };
+
   const handleDeleteHistoryItem = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id));
   };
@@ -766,6 +772,7 @@ export default function App() {
               exercises={exercises}
               settings={settings}
               onAddBodyWeight={handleAddBodyWeight}
+              onUpdateBodyWeight={handleUpdateBodyWeight}
               onOpenOneRMCalc={() => setIsOneRMCalcOpen(true)}
             />
           )}
