@@ -22,12 +22,25 @@ import {
   ExternalLink,
   User,
   Cloud,
-  RefreshCw
+  RefreshCw,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { CompletedWorkout, Exercise, UserSettings, MUSCLE_GROUPS } from '../types/fitness';
 import { NumericInput } from './NumericInput';
 
 type HistoryTab = 'history' | 'exercises' | 'settings';
+
+interface WorkoutEditDraft {
+  id: string;
+  title: string;
+  date: string;
+  durationMinutes: string;
+  setValues: Record<string, { weight: string; reps: string; rpe: string }>;
+}
+
+const workoutSetKey = (exerciseId: string, setId: string) => `${exerciseId}:${setId}`;
 
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -45,6 +58,7 @@ interface HistoryAndSettingsProps {
   initialTab?: HistoryTab;
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onDeleteHistoryItem: (workoutId: string) => void;
+  onUpdateHistoryItem: (workout: CompletedWorkout) => void;
   onExportData: () => void;
   onImportData: (e: React.ChangeEvent<HTMLInputElement>) => void;
   driveConfigured: boolean;
@@ -63,6 +77,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   initialTab = 'history',
   onUpdateSettings,
   onDeleteHistoryItem,
+  onUpdateHistoryItem,
   onExportData,
   onImportData,
   driveConfigured,
@@ -90,8 +105,91 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [selectedMuscleFilter, setSelectedMuscleFilter] = useState('All');
   const [selectedExerciseForModal, setSelectedExerciseForModal] = useState<Exercise | null>(null);
+  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
+  const [workoutEditDraft, setWorkoutEditDraft] = useState<WorkoutEditDraft | null>(null);
+  const [workoutEditError, setWorkoutEditError] = useState('');
 
   useEffect(() => setActiveTab(initialTab), [initialTab]);
+
+  const startEditingWorkout = (workout: CompletedWorkout) => {
+    const date = new Date(workout.date);
+    const dateInput = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const setValues: WorkoutEditDraft['setValues'] = {};
+    workout.exercises.forEach((exercise) => exercise.sets.forEach((set) => {
+      setValues[workoutSetKey(exercise.id, set.id)] = {
+        weight: String(set.weight),
+        reps: String(set.reps),
+        rpe: set.rpe === undefined ? '' : String(set.rpe)
+      };
+    }));
+    setWorkoutEditDraft({ id: workout.id, title: workout.title, date: dateInput, durationMinutes: String(workout.durationMinutes), setValues });
+    setWorkoutEditError('');
+    setEditingWorkoutId(workout.id);
+  };
+
+  const updateWorkoutDraftSet = (exerciseId: string, setId: string, field: 'weight' | 'reps' | 'rpe', value: string) => {
+    const key = workoutSetKey(exerciseId, setId);
+    setWorkoutEditDraft((draft) => draft ? {
+      ...draft,
+      setValues: { ...draft.setValues, [key]: { ...draft.setValues[key], [field]: value } }
+    } : draft);
+  };
+
+  const cancelWorkoutEdit = () => {
+    setEditingWorkoutId(null);
+    setWorkoutEditDraft(null);
+    setWorkoutEditError('');
+  };
+
+  const saveWorkoutEdit = (event: React.FormEvent, workout: CompletedWorkout) => {
+    event.preventDefault();
+    if (!workoutEditDraft || workoutEditDraft.id !== workout.id) return;
+    if (!workoutEditDraft.title.trim() || !workoutEditDraft.date) {
+      setWorkoutEditError('Add a workout name and date before saving.');
+      return;
+    }
+    const durationMinutes = Number(workoutEditDraft.durationMinutes);
+    if (!Number.isFinite(durationMinutes) || durationMinutes < 0) {
+      setWorkoutEditError('Workout duration must be zero or more minutes.');
+      return;
+    }
+    const date = new Date(`${workoutEditDraft.date}T12:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      setWorkoutEditError('Choose a valid workout date.');
+      return;
+    }
+
+    let invalidSet = false;
+    const exercises = workout.exercises.map((exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) => {
+        const values = workoutEditDraft.setValues[workoutSetKey(exercise.id, set.id)];
+        const weight = Number(values?.weight.trim().replace(',', '.'));
+        const reps = Number(values?.reps);
+        const rpeText = values?.rpe.trim() ?? '';
+        const rpe = rpeText ? Number(rpeText.replace(',', '.')) : undefined;
+        if (!Number.isFinite(weight) || weight < 0 || !Number.isInteger(reps) || reps < 0 ||
+          (rpe !== undefined && (!Number.isFinite(rpe) || rpe < 0 || rpe > 10))) {
+          invalidSet = true;
+          return set;
+        }
+        return { ...set, weight, reps, rpe };
+      })
+    }));
+    if (invalidSet) {
+      setWorkoutEditError('Check each set: weight and reps must be valid; RPE must be from 0 to 10.');
+      return;
+    }
+
+    onUpdateHistoryItem({
+      ...workout,
+      title: workoutEditDraft.title.trim(),
+      date: date.toISOString(),
+      durationMinutes: Math.round(durationMinutes),
+      exercises
+    });
+    cancelWorkoutEdit();
+  };
 
   const categories = ['All', ...MUSCLE_GROUPS];
 
@@ -289,65 +387,165 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                   {/* Expanded Breakdown */}
                   {isExpanded && (
                     <div className="p-4 sm:p-5 bg-neutral-950/60 border-t border-neutral-800 space-y-4 animate-in fade-in">
-                      {/* PR tags */}
-                      {workout.prsAchieved.length > 0 && (
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col gap-1.5">
-                          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <Trophy className="w-3.5 h-3.5" />
-                            Milestones Achieved
-                          </span>
-                          {workout.prsAchieved.map((pr, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                              <span className="text-neutral-300">{pr.exerciseName} ({pr.description})</span>
-                              <span className="font-mono font-bold text-emerald-400">{pr.value}</span>
-                            </div>
+                      {editingWorkoutId === workout.id && workoutEditDraft ? (
+                        <form onSubmit={(event) => saveWorkoutEdit(event, workout)} className="space-y-3">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                            <label className="text-[9px] font-semibold text-neutral-400">
+                              Workout name
+                              <input
+                                value={workoutEditDraft.title}
+                                onChange={(event) => setWorkoutEditDraft((draft) => draft ? { ...draft, title: event.target.value } : draft)}
+                                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                              />
+                            </label>
+                            <label className="text-[9px] font-semibold text-neutral-400">
+                              Date
+                              <input
+                                type="date"
+                                value={workoutEditDraft.date}
+                                onChange={(event) => setWorkoutEditDraft((draft) => draft ? { ...draft, date: event.target.value } : draft)}
+                                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] text-white outline-none focus:border-emerald-500"
+                              />
+                            </label>
+                            <label className="text-[9px] font-semibold text-neutral-400">
+                              Minutes
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                inputMode="numeric"
+                                value={workoutEditDraft.durationMinutes}
+                                onChange={(event) => setWorkoutEditDraft((draft) => draft ? { ...draft, durationMinutes: event.target.value } : draft)}
+                                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] text-white outline-none focus:border-emerald-500"
+                              />
+                            </label>
+                          </div>
+                          {workout.exercises.map((exercise) => (
+                            <section key={exercise.id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
+                              <h4 className="mb-2 text-xs font-bold text-white">{exercise.exerciseName}</h4>
+                              <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1.5">
+                                <span className="text-[8px] font-bold uppercase text-neutral-500">Set</span>
+                                <span className="text-[8px] font-bold uppercase text-neutral-500">Weight</span>
+                                <span className="text-[8px] font-bold uppercase text-neutral-500">Reps</span>
+                                <span className="text-[8px] font-bold uppercase text-neutral-500">RPE</span>
+                                {exercise.sets.map((set) => {
+                                  const values = workoutEditDraft.setValues[workoutSetKey(exercise.id, set.id)];
+                                  return (
+                                    <React.Fragment key={set.id}>
+                                      <span className="text-[10px] font-semibold text-neutral-500">{set.setNumber}</span>
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={values?.weight ?? ''}
+                                        onFocus={(event) => event.currentTarget.select()}
+                                        onChange={(event) => updateWorkoutDraftSet(exercise.id, set.id, 'weight', event.target.value)}
+                                        aria-label={`${exercise.exerciseName} set ${set.setNumber} weight`}
+                                        className="numeric-entry min-w-0 rounded-lg border border-neutral-700 bg-neutral-950 px-1.5 py-2 text-center text-[11px] text-white outline-none focus:border-emerald-500"
+                                      />
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={values?.reps ?? ''}
+                                        onFocus={(event) => event.currentTarget.select()}
+                                        onChange={(event) => updateWorkoutDraftSet(exercise.id, set.id, 'reps', event.target.value)}
+                                        aria-label={`${exercise.exerciseName} set ${set.setNumber} reps`}
+                                        className="numeric-entry min-w-0 rounded-lg border border-neutral-700 bg-neutral-950 px-1.5 py-2 text-center text-[11px] text-white outline-none focus:border-emerald-500"
+                                      />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={values?.rpe ?? ''}
+                                        onFocus={(event) => event.currentTarget.select()}
+                                        onChange={(event) => updateWorkoutDraftSet(exercise.id, set.id, 'rpe', event.target.value)}
+                                        aria-label={`${exercise.exerciseName} set ${set.setNumber} RPE`}
+                                        className="numeric-entry min-w-0 rounded-lg border border-neutral-700 bg-neutral-950 px-1.5 py-2 text-center text-[11px] text-white outline-none focus:border-emerald-500"
+                                      />
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </div>
+                            </section>
                           ))}
-                        </div>
-                      )}
-
-                      {/* Exercises detailed */}
-                      <div className="space-y-3">
-                        {workout.exercises.map((ex, eIdx) => (
-                          <div
-                            key={ex.id || eIdx}
-                            className="p-3 rounded-2xl bg-neutral-900 border border-neutral-800/80"
-                          >
-                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800">
-                              <span className="text-xs font-bold text-white">{ex.exerciseName}</span>
-                              <span className="text-[11px] text-neutral-400">{ex.category} • {ex.equipment}</span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              {ex.sets.map((s, sIdx) => (
-                                <div
-                                  key={s.id || sIdx}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium border ${
-                                    s.completed
-                                      ? 'bg-neutral-950 text-neutral-200 border-neutral-700'
-                                      : 'bg-neutral-950/50 text-neutral-500 border-neutral-800'
-                                  }`}
-                                >
-                                  <span className="text-neutral-400 text-[10px] mr-1">#{s.setNumber}:</span>
-                                  <span className="font-bold text-emerald-400">{s.weight}</span>
-                                  <span className="text-neutral-400 text-[11px] ml-0.5">×</span>
-                                  <span className="text-white ml-0.5">{s.reps}</span>
+                          {workoutEditError && <p role="alert" className="text-[10px] font-semibold text-rose-300">{workoutEditError}</p>}
+                          <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
+                            <button type="button" onClick={cancelWorkoutEdit} className="rounded-xl border border-neutral-700 px-3 py-2 text-[11px] font-semibold text-neutral-300">Cancel</button>
+                            <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-[11px] font-extrabold text-neutral-950">
+                              <Check className="h-3.5 w-3.5" aria-hidden="true" /> Save corrections
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          {/* PR tags */}
+                          {workout.prsAchieved.length > 0 && (
+                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col gap-1.5">
+                              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Trophy className="w-3.5 h-3.5" />
+                                Milestones Achieved
+                              </span>
+                              {workout.prsAchieved.map((pr, i) => (
+                                <div key={i} className="flex items-center justify-between text-xs">
+                                  <span className="text-neutral-300">{pr.exerciseName} ({pr.description})</span>
+                                  <span className="font-mono font-bold text-emerald-400">{pr.value}</span>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          )}
 
-                      {/* Footer Actions */}
-                      <div className="flex justify-end pt-2">
-                        <button
-                          onClick={() => onDeleteHistoryItem(workout.id)}
-                          className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1.5 rounded-lg hover:bg-neutral-900 transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Log Entry
-                        </button>
-                      </div>
+                          {/* Exercises detailed */}
+                          <div className="space-y-3">
+                            {workout.exercises.map((ex, eIdx) => (
+                              <div
+                                key={ex.id || eIdx}
+                                className="p-3 rounded-2xl bg-neutral-900 border border-neutral-800/80"
+                              >
+                                <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800">
+                                  <span className="text-xs font-bold text-white">{ex.exerciseName}</span>
+                                  <span className="text-[11px] text-neutral-400">{ex.category} • {ex.equipment}</span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  {ex.sets.map((s, sIdx) => (
+                                    <div
+                                      key={s.id || sIdx}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium border ${
+                                        s.completed
+                                          ? 'bg-neutral-950 text-neutral-200 border-neutral-700'
+                                          : 'bg-neutral-950/50 text-neutral-500 border-neutral-800'
+                                      }`}
+                                    >
+                                      <span className="text-neutral-400 text-[10px] mr-1">#{s.setNumber}:</span>
+                                      <span className="font-bold text-emerald-400">{s.weight}</span>
+                                      <span className="text-neutral-400 text-[11px] ml-0.5">×</span>
+                                      <span className="text-white ml-0.5">{s.reps}</span>
+                                      {s.rpe !== undefined && <span className="ml-1 text-[10px] text-neutral-500">RPE {s.rpe}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="flex items-center justify-between gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditingWorkout(workout)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-300 transition hover:border-emerald-500/50 hover:text-emerald-300"
+                            >
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit workout
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteHistoryItem(workout.id)}
+                              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-neutral-900 hover:text-red-300"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete Log Entry
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

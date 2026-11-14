@@ -32,7 +32,8 @@ const STORAGE_KEYS = {
   HISTORY: 'fitlog_history_v1',
   BODY_WEIGHTS: 'fitlog_body_weights_v1',
   ACTIVE_WORKOUT: 'fitlog_active_workout_v1',
-  SETTINGS: 'fitlog_settings_v1'
+  SETTINGS: 'fitlog_settings_v1',
+  DRIVE_LAST_SYNC: 'fitlog_drive_last_sync_v1'
 };
 
 const loadExerciseLibrary = (): Exercise[] => {
@@ -150,7 +151,7 @@ export default function App() {
     GOOGLE_DRIVE_CLIENT_ID ? 'disconnected' : 'setup-required'
   );
   const [driveSyncMessage, setDriveSyncMessage] = useState('');
-  const [driveLastSyncedAt, setDriveLastSyncedAt] = useState<string | null>(null);
+  const [driveLastSyncedAt, setDriveLastSyncedAt] = useState<string | null>(() => localStorage.getItem(STORAGE_KEYS.DRIVE_LAST_SYNC));
   const [driveSyncPulse, setDriveSyncPulse] = useState(0);
   const driveSyncInProgress = useRef(false);
   const skipNextDriveAutoSync = useRef(false);
@@ -230,7 +231,9 @@ export default function App() {
         applyDriveData(merged);
       }
       driveDataRef.current = merged;
-      setDriveLastSyncedAt(new Date().toISOString());
+      const syncedAt = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEYS.DRIVE_LAST_SYNC, syncedAt);
+      setDriveLastSyncedAt(syncedAt);
       setDriveSyncStatus('synced');
     } catch (error) {
       setDriveToken(null);
@@ -265,7 +268,9 @@ export default function App() {
       }
       driveDataRef.current = merged;
       setDriveToken(token);
-      setDriveLastSyncedAt(new Date().toISOString());
+      const syncedAt = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEYS.DRIVE_LAST_SYNC, syncedAt);
+      setDriveLastSyncedAt(syncedAt);
       setDriveSyncStatus('synced');
     } catch (error) {
       setDriveSyncStatus('error');
@@ -587,6 +592,44 @@ export default function App() {
     ));
   };
 
+  const handleUpdateHistoryItem = (updatedWorkout: CompletedWorkout) => {
+    const edited = history.map((workout) => workout.id === updatedWorkout.id ? updatedWorkout : workout);
+    const chronological = [...edited].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const bestByExercise = new Map<string, number>();
+    const recalculated = chronological.map((workout) => {
+      const totalSets = workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).length, 0);
+      const totalReps = workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).reduce((setSum, set) => setSum + set.reps, 0), 0);
+      const totalVolume = workout.exercises.reduce((sum, exercise) => sum + exercise.sets.filter((set) => set.completed).reduce((setSum, set) => setSum + set.weight * set.reps, 0), 0);
+      const prsAchieved: CompletedWorkout['prsAchieved'] = [];
+
+      workout.exercises.forEach((exercise) => {
+        const key = exercise.exerciseId || exercise.exerciseName.trim().toLowerCase();
+        const previousBest = bestByExercise.get(key) ?? 0;
+        const completedSets = exercise.sets.filter((set) => set.completed);
+        const bestSet = completedSets.reduce<WorkoutSet | null>((best, set) => !best || set.weight > best.weight ? set : best, null);
+        if (bestSet && previousBest > 0 && bestSet.weight > previousBest) {
+          prsAchieved.push({
+            exerciseName: exercise.exerciseName,
+            description: 'New Max Weight Record',
+            value: `${bestSet.weight} ${settings.weightUnit} × ${bestSet.reps} reps`
+          });
+        }
+        if (bestSet) bestByExercise.set(key, Math.max(previousBest, bestSet.weight));
+      });
+
+      if (prsAchieved.length === 0 && totalVolume > 5000) {
+        prsAchieved.push({
+          exerciseName: workout.title,
+          description: 'Session Volume Milestone',
+          value: `${totalVolume.toLocaleString()} ${settings.weightUnit}`
+        });
+      }
+      return { ...workout, totalSets, totalReps, totalVolume, prsAchieved };
+    });
+
+    setHistory(recalculated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
   const handleDeleteHistoryItem = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id));
   };
@@ -646,29 +689,80 @@ export default function App() {
     { screen: 4, label: 'History', icon: History }
   ];
 
+  const driveStatusLabel = driveSyncStatus === 'setup-required'
+    ? 'Drive setup needed'
+    : driveSyncStatus === 'disconnected'
+      ? 'Drive not connected'
+      : driveSyncStatus === 'connecting'
+        ? 'Connecting to Drive…'
+        : driveSyncStatus === 'syncing'
+          ? 'Syncing to Drive…'
+          : driveSyncStatus === 'synced'
+            ? 'Drive synced'
+            : 'Drive sync needs attention';
+  const driveStatusColor = driveSyncStatus === 'synced'
+    ? 'bg-emerald-400'
+    : driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting'
+      ? 'bg-fitlog-gold'
+      : driveSyncStatus === 'error'
+        ? 'bg-rose-400'
+        : 'bg-neutral-500';
+  const driveSyncTime = driveLastSyncedAt
+    ? new Date(driveLastSyncedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : 'No successful sync yet';
+  const openDriveSettings = () => {
+    setHistoryInitialTab('settings');
+    setCurrentScreen(4);
+  };
+
   return (
     <div className="min-h-screen bg-[#0d100e] text-neutral-100 flex flex-col items-center justify-start pb-24">
-      <header className="w-full max-w-[430px] px-4 py-3 border-b border-neutral-800/80 bg-neutral-950/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-900/50 border border-emerald-800/70 flex items-center justify-center text-emerald-300">
-              <Activity className="w-4 h-4" />
+      <header className="sticky top-0 z-40 w-full max-w-[430px] border-b border-neutral-800/80 bg-neutral-950/95 px-4 pb-2.5 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-800/70 bg-emerald-900/50 text-emerald-300">
+              <Activity className="h-4 w-4" />
+            </div>
+            <div>
+              <h1 className="text-sm font-extrabold tracking-tight text-white">FitLog</h1>
+              <p className="text-[9px] text-neutral-400">Training log</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-extrabold tracking-tight text-white">FitLog</h1>
-            <p className="text-[9px] text-neutral-400">Training log</p>
-          </div>
+          <button
+            onClick={openDriveSettings}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 text-xs font-semibold text-emerald-300 transition hover:border-emerald-800 hover:bg-neutral-900"
+            aria-label="Open profile and settings"
+          >
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            <span>Profile</span>
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setHistoryInitialTab('settings');
-            setCurrentScreen(4);
-          }}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 text-xs font-semibold text-emerald-300 transition hover:border-emerald-800 hover:bg-neutral-900"
-          aria-label="Open profile and settings"
-        >
-          <UserRound className="h-4 w-4" aria-hidden="true" />
-          <span>Profile</span>
-        </button>
+        <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={openDriveSettings}
+            className="flex min-w-0 items-center gap-1.5 rounded-lg py-1 text-left"
+            aria-label={`${driveStatusLabel}. Last successful sync: ${driveSyncTime}. Open sync settings.`}
+          >
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${driveStatusColor}`} aria-hidden="true" />
+            <span className="truncate text-[9px] font-semibold text-neutral-300">{driveStatusLabel}</span>
+            <span className="truncate text-[9px] text-neutral-500">· Last sync {driveSyncTime}</span>
+          </button>
+          {(driveSyncStatus === 'synced' || driveSyncStatus === 'syncing') ? (
+            <button
+              type="button"
+              onClick={handleSyncDrive}
+              disabled={driveSyncStatus === 'syncing'}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-bold text-emerald-300 disabled:opacity-50"
+              aria-label="Sync FitLog with Google Drive now"
+            >
+              <RefreshCw className={`h-3 w-3 ${driveSyncStatus === 'syncing' ? 'animate-spin' : ''}`} aria-hidden="true" />
+              Sync
+            </button>
+          ) : (
+            <button type="button" onClick={openDriveSettings} className="shrink-0 px-2 py-1 text-[9px] font-bold text-emerald-300">Manage</button>
+          )}
+        </div>
       </header>
 
       <main className="w-full max-w-[430px] flex-1 px-4 pt-4 pb-5">
@@ -786,6 +880,7 @@ export default function App() {
               initialTab={historyInitialTab}
               onUpdateSettings={(newSt) => setSettings((prev) => ({ ...prev, ...newSt }))}
               onDeleteHistoryItem={handleDeleteHistoryItem}
+              onUpdateHistoryItem={handleUpdateHistoryItem}
               onExportData={handleExportData}
               onImportData={handleImportData}
               driveConfigured={Boolean(GOOGLE_DRIVE_CLIENT_ID)}
