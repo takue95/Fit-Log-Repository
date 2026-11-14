@@ -1,4 +1,4 @@
-const CACHE = 'fitlog-shell-v9';
+const CACHE = 'fitlog-shell-v10';
 const BASE = self.registration.scope;
 const APP_SHELL = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`, `${BASE}fitlog-icon.svg`];
 self.addEventListener('install', (event) => {
