@@ -472,22 +472,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-5 animate-in fade-in duration-200">
-      <section className="relative isolate overflow-hidden rounded-[1.4rem] border border-fitlog-gold/25 bg-[radial-gradient(ellipse_at_95%_5%,rgba(216,179,106,0.16),transparent_32%),radial-gradient(ellipse_at_95%_5%,rgba(41,70,50,0.72),rgba(24,35,27,0.92)_42%,rgba(19,25,21,1)_78%)] px-5 py-5">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-14 top-14 -z-10 h-44 w-44 rounded-full border border-fitlog-gold/15 shadow-[0_0_0_18px_rgba(216,179,106,0.05),0_0_0_37px_rgba(216,179,106,0.025)]" />
-        <p className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.13em] uppercase text-fitlog-gold-soft">
-          <span className="h-1.5 w-1.5 rounded-full bg-fitlog-gold" />
+      <section className="relative isolate overflow-hidden rounded-[1.4rem] border border-emerald-700/35 bg-[radial-gradient(ellipse_at_95%_5%,rgba(120,169,141,0.13),transparent_32%),radial-gradient(ellipse_at_95%_5%,rgba(41,70,50,0.72),rgba(24,35,27,0.92)_42%,rgba(19,25,21,1)_78%)] px-5 py-5">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-14 top-14 -z-10 h-44 w-44 rounded-full border border-emerald-300/15 shadow-[0_0_0_18px_rgba(120,169,141,0.045),0_0_0_37px_rgba(120,169,141,0.022)]" />
+        <p className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.13em] uppercase text-emerald-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
         <h2 className="mt-3 text-[32px] leading-[1.08] font-extrabold tracking-tight text-white">
           Make today<br />count.
         </h2>
-        <blockquote className="mt-4 max-w-[18rem] border-l-2 border-fitlog-gold pl-3 text-xs leading-relaxed text-neutral-300">
+        <blockquote className="mt-4 max-w-[18rem] border-l-2 border-emerald-400 pl-3 text-xs leading-relaxed text-neutral-300">
           “Strength is built by the work you show up for.”
         </blockquote>
         <div className="mt-4 rounded-2xl border border-neutral-800/90 bg-neutral-950/70 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-fitlog-gold/10 text-fitlog-gold"><CalendarDays className="h-4 w-4" aria-hidden="true" /></span>
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300"><CalendarDays className="h-4 w-4" aria-hidden="true" /></span>
               <span className="min-w-0"><span className="block text-[8px] font-bold uppercase tracking-[.12em] text-neutral-400">This week</span><strong className="mt-0.5 block text-xs font-bold text-white">{Math.min(completedThisWeek, weeklyTarget)} of {weeklyTarget} sessions</strong></span>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold text-neutral-400">
@@ -506,31 +506,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-800" role="progressbar" aria-label="Weekly workout target progress" aria-valuenow={Math.min(completedThisWeek, weeklyTarget)} aria-valuemin={0} aria-valuemax={weeklyTarget}>
-            <span className="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-fitlog-gold transition-all" style={{ width: `${weeklyProgress}%` }} />
+            <span className="block h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all" style={{ width: `${weeklyProgress}%` }} />
           </div>
         </div>
 
-        <section className="mt-3 rounded-2xl border border-fitlog-gold/20 bg-neutral-950/85 p-3.5 shadow-inner" aria-live="polite" aria-label="Training suggestion">
+        <section className="mt-3 rounded-2xl border border-emerald-800/40 bg-neutral-950/85 p-3.5 shadow-inner" aria-live="polite" aria-label="Training suggestion">
           <div className="flex items-center gap-2">
             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-fitlog-gold/10 text-fitlog-gold">
               {selectedInsight.kind === 'target' ? <TrendingUp className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'calves' ? <Target className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'milestone' ? <Trophy className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'cue' ? <Sparkles className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
             </span>
             <span className="text-[9px] font-extrabold uppercase tracking-[.1em] text-emerald-300">Today’s focus</span>
-            <span className="ml-auto min-w-0 truncate text-[8px] font-bold uppercase tracking-wider text-fitlog-gold-soft">{selectedInsight.label}</span>
+            <span className="ml-auto min-w-0 truncate text-[8px] font-bold uppercase tracking-wider text-emerald-200">{selectedInsight.label}</span>
             <span className="shrink-0 text-[8px] font-semibold text-neutral-500">{insightIndex + 1}/{homeCoachInsights.length}</span>
           </div>
           <h3 className="mt-2 text-[15px] font-extrabold leading-tight text-white">{selectedInsight.title}</h3>
           <p className="mt-1 min-h-[2.3em] text-[10px] leading-relaxed text-neutral-400">{selectedInsight.context}</p>
           <div className="my-2 rounded-xl bg-neutral-900/90 px-3 py-2">
             <span className="block text-[8px] font-bold uppercase tracking-[.1em] text-neutral-500">{selectedInsight.kicker}</span>
-            <strong className="mt-1 block break-words text-[12px] leading-snug text-fitlog-gold">{selectedInsight.suggestion}</strong>
+            <strong className="mt-1 block break-words text-[12px] leading-snug text-emerald-300">{selectedInsight.suggestion}</strong>
           </div>
           <button onClick={handleCoachAction} className="flex min-h-10 w-full items-center justify-between gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-left text-[11px] font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-400">
             <span>{selectedInsight.actionLabel}</span><ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
           </button>
           <p className="mt-1.5 text-center text-[8px] leading-relaxed text-neutral-500">{selectedInsight.footnote}</p>
           {homeCoachInsights.length > 1 && (
-            <button type="button" onClick={handleAnotherInsight} className="mt-1 flex min-h-8 w-full items-center justify-center gap-1.5 text-[9px] font-bold text-fitlog-gold hover:text-fitlog-gold-soft">
+            <button type="button" onClick={handleAnotherInsight} className="mt-1 flex min-h-8 w-full items-center justify-center gap-1.5 text-[9px] font-bold text-emerald-300 hover:text-emerald-200">
               <Sparkles className="h-3 w-3" aria-hidden="true" /> Another insight <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </button>
           )}

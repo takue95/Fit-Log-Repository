@@ -15,16 +15,16 @@
   --color-neutral-200: #dfe5e1;
   --color-neutral-100: #f2f5f2;
 
-  --color-emerald-950: #102016;
-  --color-emerald-900: #183022;
-  --color-emerald-800: #21402f;
-  --color-emerald-700: #326646;
-  --color-emerald-600: #47805d;
-  --color-emerald-500: #629d79;
-  --color-emerald-400: #78b48f;
-  --color-emerald-300: #a4ccb2;
-  --color-emerald-200: #c3dfce;
-  --color-emerald-100: #def0e4;
+  --color-emerald-950: #101d15;
+  --color-emerald-900: #192d22;
+  --color-emerald-800: #274433;
+  --color-emerald-700: #3b6249;
+  --color-emerald-600: #527a60;
+  --color-emerald-500: #6b9277;
+  --color-emerald-400: #78a98d;
+  --color-emerald-300: #a7c9b4;
+  --color-emerald-200: #c5dbcd;
+  --color-emerald-100: #e0ede5;
 
   --color-fitlog-gold: #d8b36a;
   --color-fitlog-gold-soft: #e8d7ac;
@@ -32,7 +32,7 @@
 
 :root {
   color-scheme: dark;
-  --fitlog-accent: #78b48f;
+  --fitlog-accent: #78a98d;
   --fitlog-surface: #151a17;
   --fitlog-border: #29312c;
 }
