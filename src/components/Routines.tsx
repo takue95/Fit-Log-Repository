@@ -535,7 +535,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                                 aria-label="Barbell bench press technique demonstration"
                               >
                                 <source
-                                  src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_dce4cff9.mp4`}
+                                  src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_b930f194.mp4`}
                                   type="video/mp4"
                                 />
                                 Your browser does not support embedded video.
