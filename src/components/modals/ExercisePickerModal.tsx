@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, Plus, Check, Info, Sparkles } from 'lucide-react';
+import { X, Search, Plus, Check, Info, Sparkles, Play, ChevronDown } from 'lucide-react';
 import { Exercise, MuscleGroup, EquipmentType, EQUIPMENT_TYPES, MUSCLE_GROUPS } from '../../types/fitness';
 
 interface ExercisePickerModalProps {
@@ -19,6 +19,7 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedEquipment, setSelectedEquipment] = useState<string>('All');
   const [viewingDetails, setViewingDetails] = useState<Exercise | null>(null);
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
 
   // Custom exercise creation state
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
@@ -232,6 +233,12 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                           </span>
                         </>
                       )}
+                      {(exercise.id === 'barbell-bench-press' || exercise.name.trim().toLowerCase() === 'barbell bench press') && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                          <Play className="h-2.5 w-2.5" aria-hidden="true" />
+                          Video
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -241,6 +248,7 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setVideoPreviewOpen(false);
                       setViewingDetails(exercise);
                     }}
                     className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-700/60 rounded-lg transition"
@@ -271,7 +279,10 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                   <p className="text-xs text-neutral-400">{viewingDetails.category} • {viewingDetails.equipment}</p>
                 </div>
                 <button
-                  onClick={() => setViewingDetails(null)}
+                  onClick={() => {
+                    setVideoPreviewOpen(false);
+                    setViewingDetails(null);
+                  }}
                   className="p-2 text-neutral-400 hover:text-white rounded-lg"
                 >
                   <X className="w-5 h-5" />
@@ -279,6 +290,49 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
               </div>
 
               <div className="py-4 space-y-4">
+                {(viewingDetails.id === 'barbell-bench-press' || viewingDetails.name.trim().toLowerCase() === 'barbell bench press') && (
+                  <section className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-3">
+                    <button
+                      type="button"
+                      onClick={() => setVideoPreviewOpen((open) => !open)}
+                      aria-expanded={videoPreviewOpen}
+                      aria-controls="exercise-library-bench-press-video"
+                      className="flex w-full items-center justify-between gap-3 text-left"
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                          <Play className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold text-neutral-100">Preview technique video</span>
+                          <span className="mt-0.5 block text-[10px] text-neutral-400">Optional bench press demonstration</span>
+                        </span>
+                      </span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-neutral-400 transition-transform ${videoPreviewOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </button>
+                    {videoPreviewOpen && (
+                      <div id="exercise-library-bench-press-video" className="mt-3 border-t border-neutral-800 pt-3">
+                        <video
+                          controls
+                          playsInline
+                          preload="none"
+                          className="mx-auto block max-h-[360px] w-full rounded-xl bg-black object-contain"
+                          aria-label="Barbell bench press technique demonstration"
+                        >
+                          <source
+                            src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_dce4cff9.mp4`}
+                            type="video/mp4"
+                          />
+                          Your browser does not support embedded video.
+                        </video>
+                        <p className="mt-2 text-center text-[10px] text-neutral-500">
+                          Tap play to preview the movement.
+                        </p>
+                      </div>
+                    )}
+                  </section>
+                )}
+
                 <div>
                   <h5 className="text-xs uppercase font-bold text-neutral-400 tracking-wider mb-1.5">Primary Muscles</h5>
                   <div className="flex flex-wrap gap-1.5">
@@ -315,7 +369,10 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
 
             <div className="pt-3 border-t border-neutral-800 flex justify-end gap-2">
               <button
-                onClick={() => setViewingDetails(null)}
+                onClick={() => {
+                  setVideoPreviewOpen(false);
+                  setViewingDetails(null);
+                }}
                 className="px-4 py-2 text-xs font-semibold text-neutral-400 hover:text-white"
               >
                 Back
@@ -323,6 +380,7 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
               <button
                 onClick={() => {
                   onSelectExercise(viewingDetails);
+                  setVideoPreviewOpen(false);
                   setViewingDetails(null);
                 }}
                 className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs rounded-xl shadow"
