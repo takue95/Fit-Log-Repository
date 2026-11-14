@@ -8,7 +8,8 @@ import {
   Layers, 
   Sparkles, 
   Check, 
-  ChevronRight, 
+  ChevronRight,
+  ChevronDown, 
   X,
   Target
 } from 'lucide-react';
@@ -178,6 +179,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   });
   const [isCreatingRoutine, setIsCreatingRoutine] = useState<boolean>(false);
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null);
+  const [routineVideoExerciseId, setRoutineVideoExerciseId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -479,32 +481,72 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               <div className="divide-y divide-neutral-800/80 bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden">
                 {viewingRoutine.exercises.map((re, idx) => {
                   const ex = exercises.find((e) => e.id === re.exerciseId);
+                  const hasBenchPressVideo = re.exerciseId === 'barbell-bench-press';
+                  const isVideoOpen = routineVideoExerciseId === re.exerciseId;
                   return (
-                    <div key={idx} className="p-3 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-neutral-800 text-[10px] font-bold text-emerald-400 flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <span className="font-bold text-white block">
-                            {ex?.name || re.exerciseId}
+                    <div key={idx} className="p-3 space-y-2 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-[10px] font-bold text-emerald-400">
+                            {idx + 1}
                           </span>
-                          <span className="text-[11px] text-neutral-400">
-                            {ex?.category} • {ex?.equipment}
+                          <div className="min-w-0">
+                            <span className="block truncate font-bold text-white">
+                              {ex?.name || re.exerciseId}
+                            </span>
+                            <span className="text-[11px] text-neutral-400">
+                              {ex?.category} • {ex?.equipment}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 text-right font-mono">
+                          <span className="font-bold text-emerald-400">
+                            {re.defaultSets} sets × {re.defaultReps} reps
                           </span>
+                          {re.targetRpe && (
+                            <span className="block text-[10px] text-neutral-400">
+                              RPE {re.targetRpe}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="text-right font-mono">
-                        <span className="text-emerald-400 font-bold">
-                          {re.defaultSets} sets × {re.defaultReps} reps
-                        </span>
-                        {re.targetRpe && (
-                          <span className="text-[10px] text-neutral-400 block">
-                            RPE {re.targetRpe}
-                          </span>
-                        )}
-                      </div>
+                      {hasBenchPressVideo && (
+                        <div className="pl-7">
+                          <button
+                            type="button"
+                            onClick={() => setRoutineVideoExerciseId(isVideoOpen ? null : re.exerciseId)}
+                            aria-expanded={isVideoOpen}
+                            aria-controls="routine-bench-press-video"
+                            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
+                          >
+                            <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                            {isVideoOpen ? 'Hide video' : 'Preview technique video'}
+                            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isVideoOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                          </button>
+                          {isVideoOpen && (
+                            <div id="routine-bench-press-video" className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950 p-2">
+                              <video
+                                controls
+                                playsInline
+                                preload="none"
+                                className="mx-auto block max-h-[360px] w-full rounded-lg bg-black object-contain"
+                                aria-label="Barbell bench press technique demonstration"
+                              >
+                                <source
+                                  src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_dce4cff9.mp4`}
+                                  type="video/mp4"
+                                />
+                                Your browser does not support embedded video.
+                              </video>
+                              <p className="mt-1.5 text-center text-[10px] text-neutral-500">
+                                Tap play to preview the movement.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
