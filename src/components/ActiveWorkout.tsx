@@ -121,6 +121,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
   const [showCancelConfirm, setShowCancelConfirm] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
   const [historyExerciseId, setHistoryExerciseId] = useState<string | null>(null);
+  const [videoPreviewExerciseId, setVideoPreviewExerciseId] = useState<string | null>(null);
   const [activeMenuExerciseId, setActiveMenuExerciseId] = useState<string | null>(null);
   
   // Mid-workout exercise swapping
@@ -690,6 +691,56 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                   </button>
                 </div>
               </div>
+
+              {exercise.exerciseName.trim().toLowerCase() === 'barbell bench press' && (
+                <div className="border-b border-neutral-800/80">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoPreviewExerciseId(
+                        videoPreviewExerciseId === exercise.id ? null : exercise.id
+                      )
+                    }
+                    aria-expanded={videoPreviewExerciseId === exercise.id}
+                    aria-controls={`exercise-video-${exercise.id}`}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-neutral-800/40"
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold text-neutral-100">Watch technique</span>
+                        <span className="mt-0.5 block text-[10px] text-neutral-400">Optional bench press video</span>
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-neutral-400 transition-transform ${videoPreviewExerciseId === exercise.id ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {videoPreviewExerciseId === exercise.id && (
+                    <div id={`exercise-video-${exercise.id}`} className="border-t border-neutral-800 bg-neutral-950/40 p-3">
+                      <video
+                        controls
+                        playsInline
+                        preload="none"
+                        className="mx-auto block max-h-[420px] w-full rounded-xl bg-black object-contain"
+                        aria-label="Barbell bench press technique demonstration"
+                      >
+                        <source
+                          src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_dce4cff9.mp4`}
+                          type="video/mp4"
+                        />
+                        Your browser does not support embedded video.
+                      </video>
+                      <p className="mt-2 text-center text-[10px] text-neutral-500">
+                        Tap play when you want to preview the movement.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Starting Weight Estimator Banner for New Exercises */}
               {isNewExercise && (
