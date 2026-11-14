@@ -234,10 +234,19 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                         </>
                       )}
                       {(exercise.id === 'barbell-bench-press' || exercise.name.trim().toLowerCase() === 'barbell bench press') && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setViewingDetails(exercise);
+                            setVideoPreviewOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/25"
+                          aria-label="Watch barbell bench press technique video"
+                        >
                           <Play className="h-2.5 w-2.5" aria-hidden="true" />
-                          Video
-                        </span>
+                          Watch video
+                        </button>
                       )}
                     </div>
                   </div>
