@@ -17,6 +17,7 @@ import {
   Download, 
   Upload, 
   Search,
+  Play,
   CheckCircle2,
   ExternalLink,
   User,
@@ -398,7 +399,15 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
                       {ex.category}
                     </span>
-                    <span className="text-[11px] text-neutral-400">{ex.equipment}</span>
+                    <span className="flex items-center gap-2 text-[11px] text-neutral-400">
+                      {ex.equipment}
+                      {(ex.id === 'barbell-bench-press' || ex.name.trim().toLowerCase() === 'barbell bench press') && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-300">
+                          <Play className="h-2.5 w-2.5" aria-hidden="true" />
+                          Video
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
                     {ex.name}
@@ -438,6 +447,28 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                     ✕
                   </button>
                 </div>
+
+                {(selectedExerciseForModal.id === 'barbell-bench-press' || selectedExerciseForModal.name.trim().toLowerCase() === 'barbell bench press') && (
+                  <section className="rounded-xl border border-emerald-500/20 bg-neutral-950 p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-300">
+                      <Play className="h-4 w-4" aria-hidden="true" />
+                      Barbell bench press video
+                    </div>
+                    <video
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="mx-auto block max-h-[360px] w-full rounded-lg bg-black object-contain"
+                      aria-label="Barbell bench press technique demonstration"
+                    >
+                      <source
+                        src={`${import.meta.env.BASE_URL}videos/Barbell_bench_press_animation_b930f194.mp4`}
+                        type="video/mp4"
+                      />
+                      Your browser does not support embedded video.
+                    </video>
+                  </section>
+                )}
 
                 <div>
                   <h5 className="text-xs uppercase font-bold text-neutral-400 mb-1.5">Muscles Worked</h5>
