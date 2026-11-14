@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound } from 'lucide-react';
+import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound, Cloud, RefreshCw } from 'lucide-react';
 import { 
   RoutineTemplate,
   CoachStartAction, 
