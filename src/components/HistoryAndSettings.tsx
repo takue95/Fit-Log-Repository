@@ -404,16 +404,15 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
                                 type="date"
                                 value={workoutEditDraft.date}
                                 onChange={(event) => setWorkoutEditDraft((draft) => draft ? { ...draft, date: event.target.value } : draft)}
-                                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] text-white outline-none focus:border-emerald-500"
+                                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] tabular-nums text-white outline-none focus:border-emerald-500"
                               />
                             </label>
                             <label className="text-[9px] font-semibold text-neutral-400">
                               Minutes
                               <input
-                                type="number"
-                                min="0"
-                                step="1"
+                                type="text"
                                 inputMode="numeric"
+                                autoComplete="off"
                                 value={workoutEditDraft.durationMinutes}
                                 onChange={(event) => setWorkoutEditDraft((draft) => draft ? { ...draft, durationMinutes: event.target.value } : draft)}
                                 className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-[10px] text-white outline-none focus:border-emerald-500"

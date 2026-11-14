@@ -490,17 +490,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-fitlog-gold/10 text-fitlog-gold"><CalendarDays className="h-4 w-4" aria-hidden="true" /></span>
               <span className="min-w-0"><span className="block text-[8px] font-bold uppercase tracking-[.12em] text-neutral-400">This week</span><strong className="mt-0.5 block text-xs font-bold text-white">{Math.min(completedThisWeek, weeklyTarget)} of {weeklyTarget} sessions</strong></span>
             </div>
-            <label className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold text-neutral-400">
-              Goal
-              <select
-                aria-label="Weekly workout target"
-                value={weeklyTarget}
-                onChange={(event) => onUpdateSettings({ weeklyWorkoutTarget: Number(event.target.value) })}
-                className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[10px] font-bold text-neutral-200 focus:border-emerald-500 focus:outline-none"
-              >
-                {[2, 3, 4, 5, 6, 7].map((target) => <option key={target} value={target}>{target}/wk</option>)}
-              </select>
-            </label>
+            <div className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold text-neutral-400">
+              <span>Goal</span>
+              <div className="inline-flex items-center rounded-lg border border-emerald-800/60 bg-emerald-950/35 p-0.5">
+                <button type="button" aria-label="Decrease weekly workout target" disabled={weeklyTarget <= 2}
+                  onClick={() => onUpdateSettings({ weeklyWorkoutTarget: Math.max(2, weeklyTarget - 1) })}
+                  className="grid h-6 w-6 place-items-center rounded-md text-sm leading-none text-neutral-400 transition hover:bg-neutral-800 hover:text-white disabled:opacity-30">−</button>
+                <span className="min-w-[3.2rem] px-1 text-center text-[10px] font-bold tabular-nums text-emerald-200">
+                  {weeklyTarget}<span className="ml-0.5 text-[8px] font-semibold text-neutral-400">/wk</span>
+                </span>
+                <button type="button" aria-label="Increase weekly workout target" disabled={weeklyTarget >= 7}
+                  onClick={() => onUpdateSettings({ weeklyWorkoutTarget: Math.min(7, weeklyTarget + 1) })}
+                  className="grid h-6 w-6 place-items-center rounded-md text-sm leading-none text-neutral-400 transition hover:bg-neutral-800 hover:text-white disabled:opacity-30">+</button>
+              </div>
+            </div>
           </div>
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-800" role="progressbar" aria-label="Weekly workout target progress" aria-valuenow={Math.min(completedThisWeek, weeklyTarget)} aria-valuemin={0} aria-valuemax={weeklyTarget}>
             <span className="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-fitlog-gold transition-all" style={{ width: `${weeklyProgress}%` }} />
