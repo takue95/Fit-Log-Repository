@@ -264,26 +264,32 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
         </button>
       </div>
 
-      <div className="flex rounded-xl border border-neutral-800 bg-neutral-950 p-1">
-        <button
-          onClick={() => setSplitView('current')}
-          className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
-            splitView === 'current' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Current Split
-        </button>
-        <button
-          onClick={() => {
-            setBrowsedSplit(selectedSplit);
-            setSplitView('browse');
-          }}
-          className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
-            splitView === 'browse' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Browse Splits
-        </button>
+      <div className="sticky top-[calc(6.25rem+env(safe-area-inset-top))] z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
+        <div className="flex rounded-xl border border-neutral-800 bg-neutral-950 p-1">
+          <button
+            onClick={() => {
+              setSplitView('current');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
+              splitView === 'current' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Current Split
+          </button>
+          <button
+            onClick={() => {
+              setBrowsedSplit(selectedSplit);
+              setSplitView('browse');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition ${
+              splitView === 'browse' ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Browse Splits
+          </button>
+        </div>
       </div>
 
       {splitView === 'current' ? (
@@ -298,6 +304,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               onClick={() => {
                 setBrowsedSplit(selectedSplit);
                 setSplitView('browse');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="shrink-0 rounded-xl border border-emerald-800/70 bg-emerald-950/40 px-3 py-2 text-[11px] font-bold text-emerald-300 hover:bg-emerald-950/70"
             >
