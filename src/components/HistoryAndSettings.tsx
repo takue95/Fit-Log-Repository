@@ -218,20 +218,19 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
-      <div className="sticky top-[calc(6.25rem+env(safe-area-inset-top))] z-30 -mx-4 -mt-4 border-b border-neutral-800 bg-neutral-950/95 px-4 pt-4 pb-2 shadow-lg shadow-black/20 backdrop-blur-md">
-        {/* Training section header and tabs stay together while the list scrolls */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 text-emerald-300"><History className="h-5 w-5" aria-hidden="true" /></span>
-            <div className="min-w-0">
-              <h2 className="text-xl font-extrabold tracking-tight text-white">Training Hub</h2>
-              <p className="text-xs text-neutral-400">Workouts, history, exercise library, and settings</p>
-            </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 text-emerald-300"><History className="h-5 w-5" aria-hidden="true" /></span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-extrabold tracking-tight text-white">Training Hub</h2>
+            <p className="text-xs text-neutral-400">Workouts, history, exercise library, and settings</p>
           </div>
-          <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
         </div>
+        <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
+      </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
+      <div className="sticky top-[calc(6.25rem+env(safe-area-inset-top))] z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
           {([
             { id: 'history', label: 'Workouts', icon: History },
             { id: 'exercises', label: 'Library', icon: BookOpen },
