@@ -11,6 +11,7 @@ interface WorkoutCompletedModalProps {
   driveConnected: boolean;
   driveSyncStatus: 'setup-required' | 'disconnected' | 'connecting' | 'syncing' | 'synced' | 'error';
   driveSyncMessage: string;
+  onSyncDrive: () => void;
   onClose: () => void;
 }
 
@@ -21,6 +22,7 @@ export const WorkoutCompletedModal: React.FC<WorkoutCompletedModalProps> = ({
   driveConnected,
   driveSyncStatus,
   driveSyncMessage,
+  onSyncDrive,
   onClose
 }) => {
   useEffect(() => {
@@ -202,18 +204,52 @@ export const WorkoutCompletedModal: React.FC<WorkoutCompletedModalProps> = ({
                 alert('Workout summary copied to clipboard!');
               }
             }}
-            className="p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl transition flex items-center justify-center"
+            className="h-11 w-10 shrink-0 rounded-xl bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 flex items-center justify-center"
             title="Share workout"
+            aria-label="Share workout summary"
           >
-            <Share2 className="w-5 h-5" />
+            <Share2 className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onSyncDrive}
+            disabled={driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting' || driveSyncStatus === 'synced'}
+            className={`flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-bold transition disabled:cursor-default ${
+              driveSyncStatus === 'synced'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                : 'border-neutral-700 bg-neutral-800 text-neutral-100 hover:border-emerald-600 hover:bg-neutral-700 disabled:opacity-80'
+            }`}
+            aria-label={
+              driveSyncStatus === 'synced'
+                ? 'Workout saved online to Google Drive'
+                : 'Sync workout to Google Drive now'
+            }
+          >
+            {driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting'
+              ? <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
+              : driveSyncStatus === 'synced'
+                ? <Cloud className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                : <Cloud className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+            <span className="truncate">
+              {driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting'
+                ? 'Syncing…'
+                : driveSyncStatus === 'synced'
+                  ? 'Saved online'
+                  : driveSyncStatus === 'error'
+                    ? 'Retry sync'
+                    : driveConnected
+                      ? 'Sync now'
+                      : 'Connect & sync'}
+            </span>
           </button>
 
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
+            className="flex h-11 min-w-0 flex-[1.25] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-500 px-2 text-xs font-bold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
           >
-            <Check className="w-4 h-4" />
-            Done & Return to Home
+            <Check className="h-4 w-4 shrink-0" />
+            Done
           </button>
         </div>
       </div>

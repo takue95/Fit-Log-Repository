@@ -273,9 +273,10 @@ export default function App() {
       setDriveSyncStatus('synced');
       return true;
     } catch (error) {
-      setDriveToken(null);
+      const message = error instanceof Error ? error.message : 'Could not sync with Google Drive.';
+      if (/401|unauthorized|invalid credentials/i.test(message)) setDriveToken(null);
       setDriveSyncStatus('error');
-      setDriveSyncMessage(error instanceof Error ? error.message : 'Could not sync with Google Drive.');
+      setDriveSyncMessage(message);
       return false;
     } finally {
       driveSyncInProgress.current = false;
@@ -319,6 +320,44 @@ export default function App() {
 
   const handleSyncDrive = () => {
     if (driveToken) setDriveSyncPulse((value) => value + 1);
+  };
+
+  const handleSyncCompletedWorkout = async () => {
+    const local = driveDataRef.current;
+    if (driveToken) {
+      await syncDriveData(false, local, true);
+      return;
+    }
+    if (!GOOGLE_DRIVE_CLIENT_ID) {
+      setDriveSyncStatus('setup-required');
+      setDriveSyncMessage('Google OAuth setup is needed before FitLog can connect.');
+      return;
+    }
+
+    setDriveSyncStatus('connecting');
+    setDriveSyncMessage('');
+    try {
+      const token = await requestGoogleDriveToken(GOOGLE_DRIVE_CLIENT_ID);
+      const remote = await loadDriveBackup(token);
+      const merged = remote ? mergeDriveData(remote.data, local, false) : local;
+      merged.activeWorkout = null;
+      if (!remote || !sameDriveData(merged, remote.data)) {
+        await saveDriveBackup(token, merged, remote?.file);
+      }
+      if (!sameDriveData(merged, local)) {
+        skipNextDriveAutoSync.current = true;
+        applyDriveData(merged);
+      }
+      driveDataRef.current = merged;
+      setDriveToken(token);
+      const syncedAt = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEYS.DRIVE_LAST_SYNC, syncedAt);
+      setDriveLastSyncedAt(syncedAt);
+      setDriveSyncStatus('synced');
+    } catch (error) {
+      setDriveSyncStatus('error');
+      setDriveSyncMessage(error instanceof Error ? error.message : 'Could not sync with Google Drive.');
+    }
   };
 
   const handleDisconnectDrive = () => {
@@ -1121,6 +1160,7 @@ export default function App() {
           driveConnected={Boolean(driveToken)}
           driveSyncStatus={driveSyncStatus}
           driveSyncMessage={driveSyncMessage}
+          onSyncDrive={handleSyncCompletedWorkout}
           onClose={() => setCompletedWorkoutSummary(null)}
         />
       )}
