@@ -126,18 +126,16 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
     if (!rangeWindow) return [];
     const startTime = rangeWindow.start.getTime();
     const endTime = rangeWindow.end.getTime();
-    const bestByMonth = new Map<string, (typeof sessionProgressionData)[number]>();
-    sessionProgressionData.forEach((point) => {
-      const date = new Date(point.dateISO);
-      const time = date.getTime();
-      if (time < startTime || time >= endTime) return;
-      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const current = bestByMonth.get(month);
-      if (!current || point.estimated1RM > current.estimated1RM) bestByMonth.set(month, point);
+    return sessionProgressionData.filter((point) => {
+      const time = new Date(point.dateISO).getTime();
+      return time >= startTime && time < endTime;
     });
-    return Array.from(bestByMonth.values()).sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
   }, [sessionProgressionData, rangeWindow]);
 
+  const personalRecordPoint = sessionProgressionData.reduce<(typeof sessionProgressionData)[number] | null>(
+    (record, point) => !record || point.estimated1RM > record.estimated1RM ? point : record,
+    null
+  );
   const growthPercent = progressionData.length > 1
     ? ((progressionData[progressionData.length - 1].estimated1RM - progressionData[0].estimated1RM) / progressionData[0].estimated1RM) * 100
     : null;
@@ -440,7 +438,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[10px] text-neutral-500">Best estimated 1RM per month</span>
+          <span className="text-[10px] text-neutral-500">Best estimated 1RM each workout</span>
           <div className="grid grid-cols-4 rounded-xl border border-neutral-800 bg-neutral-950 p-1" aria-label="Chart date range">
             {(['3M', '6M', '12M', 'All'] as const).map((range) => (
               <button
@@ -495,19 +493,24 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             {progressionData.map((point, index) => {
               const isLast = index === progressionData.length - 1;
               const isSelected = point.dateISO === activeProgressPoint?.dateISO;
-              const pointLabel = `${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM from ${point.maxWeight} ${settings.weightUnit} × ${point.reps} reps`;
+              const isRecord = point.dateISO === personalRecordPoint?.dateISO;
+              const x = dateToX(point.dateISO);
+              const y = dateToY(point.estimated1RM);
+              const pointLabel = `${new Date(point.dateISO).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}: ${Math.round(point.estimated1RM)} ${settings.weightUnit} estimated 1RM from ${point.maxWeight} ${settings.weightUnit} × ${point.reps} reps`;
               return (
                 <g key={point.dateISO}>
+                  {isRecord && <circle cx={x} cy={y} r="7" fill="#0a0a0a" stroke="#d9b85f" strokeWidth="1.8" pointerEvents="none" />}
                   <circle
-                    cx={dateToX(point.dateISO)}
-                    cy={dateToY(point.estimated1RM)}
-                    r={isSelected ? 6 : isLast ? 4.5 : 8}
-                    fill={isSelected ? '#a3e6bd' : isLast ? '#71c99a' : 'transparent'}
-                    stroke={isSelected ? '#4fbd80' : isLast ? '#0a0a0a' : 'transparent'}
-                    strokeWidth={isSelected ? 3 : isLast ? 2 : 0}
+                    cx={x}
+                    cy={y}
+                    r={isSelected ? 5 : isRecord ? 4 : 3}
+                    fill={isSelected ? '#c2f0d3' : isLast ? '#8bd5ad' : '#71b593'}
+                    fillOpacity={isSelected || isLast || isRecord ? 1 : 0.58}
+                    stroke={isSelected ? '#f0fff5' : isRecord ? '#d9b85f' : '#0a0a0a'}
+                    strokeWidth={isSelected || isRecord ? 1.8 : 1.2}
                     role="button"
                     tabIndex={0}
-                    aria-label={pointLabel}
+                    aria-label={pointLabel + (isRecord ? ', personal record' : '')}
                     onClick={() => setSelectedProgressPoint(point.dateISO)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -516,10 +519,26 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                       }
                     }}
                     style={{ cursor: 'pointer' }}
-                  ><title>{pointLabel}</title></circle>
+                  ><title>{pointLabel}{isRecord ? ' · Personal record' : ''}</title></circle>
                 </g>
               );
             })}
+            {progressionData.length > 0 && (() => {
+              const latest = progressionData[progressionData.length - 1];
+              const x = dateToX(latest.dateISO);
+              const y = dateToY(latest.estimated1RM);
+              const labelWidth = 58;
+              const labelX = Math.max(paddingX, Math.min(rightX - labelWidth, x - labelWidth / 2));
+              const labelY = Math.max(4, y - 23);
+              return (
+                <g pointerEvents="none">
+                  <rect x={labelX} y={labelY} width={labelWidth} height="16" rx="8" fill="#183426" stroke="#477c60" strokeWidth="0.8" />
+                  <text x={labelX + labelWidth / 2} y={labelY + 11} textAnchor="middle" fill="#c5efd5" fontSize="8" fontWeight="700">
+                    {Math.round(latest.estimated1RM)} {settings.weightUnit}
+                  </text>
+                </g>
+              );
+            })()}
             {rangeWindow && [0, 0.5, 1].map((fraction) => {
               const start = rangeWindow.start.getTime();
               const end = rangeWindow.end.getTime() - 1;
@@ -537,9 +556,9 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
         {/* Current Stat highlight */}
         {activeProgressPoint && <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs">
           <span className="min-w-0 text-neutral-400">
-            <span className="block text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{activeProgressPoint.dateISO === progressionData[progressionData.length - 1]?.dateISO ? 'Latest month' : 'Selected month'}</span>
+            <span className="block text-[9px] font-semibold uppercase tracking-wide text-neutral-500">{activeProgressPoint.dateISO === progressionData[progressionData.length - 1]?.dateISO ? 'Latest workout' : 'Selected workout'}</span>
             <span className="font-bold text-white">{activeProgressPoint.maxWeight} {settings.weightUnit} × {activeProgressPoint.reps} reps</span>
-            <span className="ml-1.5 text-neutral-500">{new Date(activeProgressPoint.dateISO).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+            <span className="ml-1.5 text-neutral-500">{new Date(activeProgressPoint.dateISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </span>
           <span className="shrink-0 font-mono font-bold text-emerald-400">
             Est. 1RM: {Math.round(activeProgressPoint.estimated1RM)} {settings.weightUnit}
