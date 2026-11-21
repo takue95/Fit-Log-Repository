@@ -23,7 +23,7 @@ import { ExercisePickerModal } from './components/modals/ExercisePickerModal';
 import { RestTimerOverlay } from './components/modals/RestTimerOverlay';
 import { WorkoutCompletedModal } from './components/modals/WorkoutCompletedModal';
 import { OneRMCalculatorModal } from './components/modals/OneRMCalculatorModal';
-import { calculate1RM } from './utils/fitnessCalc';
+import { calculate1RM, generateWeightOptions } from './utils/fitnessCalc';
 import { FitLogDriveData, GOOGLE_DRIVE_CLIENT_ID, loadDriveBackup, mergeDriveData, requestGoogleDriveToken, sameDriveData, saveDriveBackup } from './utils/googleDriveSync';
 
 const STORAGE_KEYS = {
@@ -318,8 +318,61 @@ export default function App() {
     };
   }, [driveToken]);
 
+  const getPreviousExerciseSets = (exerciseId: string, exerciseName: string): WorkoutSet[] => {
+    const normalize = (name: string) => name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+    const targetName = normalize(exerciseName);
+    const latestWorkouts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    for (const workout of latestWorkouts) {
+      const previousExercise = workout.exercises.find((entry) =>
+        (entry.exerciseId === exerciseId || normalize(entry.exerciseName) === targetName) &&
+        entry.sets.some((set) => set.completed && set.type === 'normal')
+      );
+      const completedSets = previousExercise?.sets
+        .filter((set) => set.completed && set.type === 'normal')
+        .sort((a, b) => a.setNumber - b.setNumber);
+      if (completedSets?.length) return completedSets;
+    }
+    return [];
+  };
+
+  const getPreviousSetForIndex = (sets: WorkoutSet[], index: number): WorkoutSet | undefined =>
+    sets[index] ?? sets[sets.length - 1];
+
+  const getRecommendedStartingWeight = (
+    equipment: Exercise['equipment'],
+    targetReps: number,
+    previousSets: WorkoutSet[]
+  ): number => {
+    const availableWeights = generateWeightOptions(equipment, settings.weightUnit)
+      .map((option) => option.value)
+      .sort((a, b) => a - b);
+    const validSets = previousSets.filter((set) => set.completed && set.type === 'normal' && set.reps > 0 && set.weight >= 0);
+    if (!validSets.length) return availableWeights[0] ?? 0;
+
+    const target = Math.max(1, Math.round(targetReps) || 8);
+    const exactRepSets = validSets.filter((set) => set.reps === target);
+    if (exactRepSets.length) {
+      return exactRepSets.reduce((best, set) => set.weight > best.weight ? set : best).weight;
+    }
+
+    const weightedSets = validSets.filter((set) => set.weight > 0);
+    if (!weightedSets.length) return 0;
+    const strongestSet = weightedSets.reduce((best, set) =>
+      set.weight * (1 + set.reps / 30) > best.weight * (1 + best.reps / 30) ? set : best
+    );
+    const estimatedTargetWeight = strongestSet.weight * (1 + strongestSet.reps / 30) / (1 + target / 30);
+    const availableAtOrBelow = availableWeights.filter((weight) => weight > 0 && weight <= estimatedTargetWeight);
+    return availableAtOrBelow.length
+      ? availableAtOrBelow[availableAtOrBelow.length - 1]
+      : availableWeights.find((weight) => weight > 0) ?? 0;
+  };
+
   // Workout Creation Handlers
   const handleStartEmptyWorkout = () => {
+    const previousSets = getPreviousExerciseSets('barbell-bench-press', 'Barbell Bench Press');
+    const previousSet = getPreviousSetForIndex(previousSets, 0);
+    const startingWeight = getRecommendedStartingWeight('Barbell', 10, previousSets);
     const newWorkout: ActiveWorkout = {
       id: `workout-${Date.now()}`,
       title: 'Freeform Workout',
@@ -338,11 +391,11 @@ export default function App() {
               id: `s-${Date.now()}-1`,
               setNumber: 1,
               type: 'normal',
-              weight: settings.weightUnit === 'lbs' ? 135 : 60,
+              weight: startingWeight,
               reps: 10,
               completed: false,
-              previousWeight: 135,
-              previousReps: 10
+              previousWeight: previousSet?.weight,
+              previousReps: previousSet?.reps
             }
           ]
         }
@@ -355,17 +408,24 @@ export default function App() {
   const handleStartRoutine = (routine: RoutineTemplate, coachAction?: CoachStartAction) => {
     let routineExercises: WorkoutExercise[] = routine.exercises.map((re, rIdx) => {
       const exObj = exercises.find((e) => e.id === re.exerciseId);
-      const sets: WorkoutSet[] = Array.from({ length: re.defaultSets }).map((_, sIdx) => ({
-        id: `s-${Date.now()}-${rIdx}-${sIdx}`,
-        setNumber: sIdx + 1,
-        type: 'normal',
-        weight: settings.weightUnit === 'lbs' ? 135 : 60,
-        reps: re.defaultReps,
-        rpe: re.targetRpe,
-        completed: false,
-        previousWeight: 135,
-        previousReps: re.defaultReps
-      }));
+      const exerciseName = exObj?.name || re.exerciseId;
+      const equipment = exObj?.equipment || 'Barbell';
+      const previousSets = getPreviousExerciseSets(re.exerciseId, exerciseName);
+      const startingWeight = getRecommendedStartingWeight(equipment, re.defaultReps, previousSets);
+      const sets: WorkoutSet[] = Array.from({ length: re.defaultSets }).map((_, sIdx) => {
+        const previousSet = getPreviousSetForIndex(previousSets, sIdx);
+        return {
+          id: `s-${Date.now()}-${rIdx}-${sIdx}`,
+          setNumber: sIdx + 1,
+          type: 'normal',
+          weight: startingWeight,
+          reps: re.defaultReps,
+          rpe: re.targetRpe,
+          completed: false,
+          previousWeight: previousSet?.weight,
+          previousReps: previousSet?.reps
+        };
+      });
 
       return {
         id: `we-${Date.now()}-${rIdx}`,
@@ -398,12 +458,8 @@ export default function App() {
     if (coachAction?.kind === 'add-exercise') {
       const exercise = exercises.find((item) => item.id === coachAction.exerciseId);
       if (exercise) {
-        const previousSet = [...history]
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .flatMap((workout) => workout.exercises)
-          .find((entry) => entry.exerciseId === exercise.id)?.sets
-          .filter((set) => set.completed && set.type === 'normal')
-          .slice(-1)[0];
+        const previousSets = getPreviousExerciseSets(exercise.id, exercise.name);
+        const startingWeight = getRecommendedStartingWeight(exercise.equipment, coachAction.reps, previousSets);
         routineExercises = [...routineExercises, {
           id: `we-${Date.now()}-coach`,
           exerciseId: exercise.id,
@@ -411,16 +467,19 @@ export default function App() {
           category: exercise.category,
           equipment: exercise.equipment,
           restSeconds: exercise.defaultRestSeconds || settings.defaultRestSeconds,
-          sets: Array.from({ length: Math.max(1, coachAction.sets) }, (_, index) => ({
-            id: `s-${Date.now()}-coach-${index}`,
-            setNumber: index + 1,
-            type: 'normal',
-            weight: previousSet?.weight ?? (exercise.category === 'Calves' ? 0 : settings.weightUnit === 'lbs' ? 135 : 60),
-            reps: coachAction.reps,
-            completed: false,
-            previousWeight: previousSet?.weight ?? 0,
-            previousReps: previousSet?.reps ?? coachAction.reps
-          }))
+          sets: Array.from({ length: Math.max(1, coachAction.sets) }, (_, index) => {
+            const previousSet = getPreviousSetForIndex(previousSets, index);
+            return {
+              id: `s-${Date.now()}-coach-${index}`,
+              setNumber: index + 1,
+              type: 'normal',
+              weight: startingWeight,
+              reps: coachAction.reps,
+              completed: false,
+              previousWeight: previousSet?.weight,
+              previousReps: previousSet?.reps
+            };
+          })
         }];
       }
     }
@@ -537,14 +596,10 @@ export default function App() {
 
   const handleAddExerciseToActive = (exercise: Exercise, setCount = 1, targetReps = 10, fallbackWeight?: number) => {
     if (!activeWorkout) return;
-    const previousSet = [...history]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .flatMap((workout) => workout.exercises)
-      .find((entry) => entry.exerciseId === exercise.id)?.sets
-      .filter((set) => set.completed && set.type === 'normal')
-      .slice(-1)[0];
-    const startingWeight = previousSet?.weight ?? fallbackWeight ??
-      (exercise.category === 'Calves' ? 0 : settings.weightUnit === 'lbs' ? 135 : 60);
+    const previousSets = getPreviousExerciseSets(exercise.id, exercise.name);
+    const startingWeight = previousSets.length
+      ? getRecommendedStartingWeight(exercise.equipment, targetReps, previousSets)
+      : fallbackWeight ?? getRecommendedStartingWeight(exercise.equipment, targetReps, previousSets);
     const safeSetCount = Math.max(1, Math.min(10, Math.round(setCount)));
     const newEx: WorkoutExercise = {
       id: `we-${Date.now()}`,
@@ -553,16 +608,19 @@ export default function App() {
       category: exercise.category,
       equipment: exercise.equipment,
       restSeconds: exercise.defaultRestSeconds || settings.defaultRestSeconds,
-      sets: Array.from({ length: safeSetCount }, (_, index) => ({
-        id: `s-${Date.now()}-${index + 1}`,
-        setNumber: index + 1,
-        type: 'normal',
-        weight: startingWeight,
-        reps: targetReps,
-        completed: false,
-        previousWeight: previousSet?.weight ?? startingWeight,
-        previousReps: previousSet?.reps ?? targetReps
-      }))
+      sets: Array.from({ length: safeSetCount }, (_, index) => {
+        const previousSet = getPreviousSetForIndex(previousSets, index);
+        return {
+          id: `s-${Date.now()}-${index + 1}`,
+          setNumber: index + 1,
+          type: 'normal',
+          weight: startingWeight,
+          reps: targetReps,
+          completed: false,
+          previousWeight: previousSet?.weight,
+          previousReps: previousSet?.reps
+        };
+      })
     };
 
     setActiveWorkout((prev) => (prev ? { ...prev, exercises: [...prev.exercises, newEx] } : null));

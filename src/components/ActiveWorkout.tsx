@@ -257,8 +257,6 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     ...s,
                     weight: suggestion.targetWeight,
                     reps: suggestion.targetReps,
-                    previousWeight: completedSetObj?.weight,
-                    previousReps: completedSetObj?.reps
                   };
                 }
                 return s;
@@ -390,6 +388,17 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
           initialReps = hint.targetReps;
         }
 
+        const previousSession = [...history]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .map((workout) => workout.exercises.find((entry) =>
+            entry.exerciseId === ex.exerciseId ||
+            entry.exerciseName.trim().toLowerCase() === ex.exerciseName.trim().toLowerCase()
+          ))
+          .find((entry) => entry?.sets.some((set) => set.completed && set.type === 'normal'));
+        const previousSessionSets = previousSession?.sets
+          .filter((set) => set.completed && set.type === 'normal')
+          .sort((a, b) => a.setNumber - b.setNumber) ?? [];
+        const previousSet = previousSessionSets[ex.sets.length] ?? previousSessionSets[previousSessionSets.length - 1];
         const newSet: WorkoutSet = {
           id: `set-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           setNumber: ex.sets.length + 1,
@@ -397,8 +406,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
           weight: initialWeight,
           reps: initialReps,
           completed: false,
-          previousWeight: lastSet?.weight,
-          previousReps: lastSet?.reps
+          previousWeight: previousSet?.weight,
+          previousReps: previousSet?.reps
         };
         return {
           ...ex,
