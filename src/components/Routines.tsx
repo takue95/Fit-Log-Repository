@@ -9,7 +9,6 @@ import {
   Sparkles, 
   Check, 
   ChevronRight,
-  ChevronDown, 
   X,
   Target,
   Search,
@@ -833,35 +832,44 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                           </span>
                         </div>
                       </div>
-                      {isEditingViewingRoutine && (
-                        <button
-                          type="button"
-                          onClick={() => removeExerciseFromViewedRoutine(re.exerciseId)}
-                          disabled={viewingRoutine.exercises.length <= 1}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-neutral-500 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-30"
-                          aria-label={`Remove ${ex?.name || re.exerciseId} from this workout`}
-                          title={viewingRoutine.exercises.length <= 1 ? 'A workout needs at least one exercise' : 'Remove exercise'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      {(hasBenchPressVideo || isEditingViewingRoutine) && (
+                        <div className="flex shrink-0 items-center gap-1">
+                          {hasBenchPressVideo && (
+                            <button
+                              type="button"
+                              onClick={() => setRoutineVideoExerciseId(isVideoOpen ? null : re.exerciseId)}
+                              aria-expanded={isVideoOpen}
+                              aria-controls="routine-bench-press-video"
+                              className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
+                                isVideoOpen
+                                  ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200'
+                                  : 'border-transparent text-neutral-400 hover:border-neutral-700 hover:bg-neutral-800 hover:text-emerald-300'
+                              }`}
+                              aria-label={`${isVideoOpen ? 'Hide' : 'Play'} technique video for ${ex?.name || re.exerciseId}`}
+                              title={isVideoOpen ? 'Hide technique video' : 'Play technique video'}
+                            >
+                              <Play className={`h-4 w-4 ${isVideoOpen ? 'fill-current' : ''}`} aria-hidden="true" />
+                            </button>
+                          )}
+                          {isEditingViewingRoutine && (
+                            <button
+                              type="button"
+                              onClick={() => removeExerciseFromViewedRoutine(re.exerciseId)}
+                              disabled={viewingRoutine.exercises.length <= 1}
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-neutral-500 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-30"
+                              aria-label={`Remove ${ex?.name || re.exerciseId} from this workout`}
+                              title={viewingRoutine.exercises.length <= 1 ? 'A workout needs at least one exercise' : 'Remove exercise'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
 
-                      {hasBenchPressVideo && (
+                      {hasBenchPressVideo && isVideoOpen && (
                         <div className="pl-[52px]">
-                          <button
-                            type="button"
-                            onClick={() => setRoutineVideoExerciseId(isVideoOpen ? null : re.exerciseId)}
-                            aria-expanded={isVideoOpen}
-                            aria-controls="routine-bench-press-video"
-                            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
-                          >
-                            <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                            {isVideoOpen ? 'Hide video' : 'Preview technique video'}
-                            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isVideoOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                          </button>
-                          {isVideoOpen && (
-                            <div id="routine-bench-press-video" className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950 p-2">
+                          <div id="routine-bench-press-video" className="rounded-xl border border-neutral-800 bg-neutral-950 p-2">
                               <video
                                 controls
                                 playsInline
@@ -878,8 +886,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                               <p className="mt-1.5 text-center text-[10px] text-neutral-500">
                                 Tap play to preview the movement.
                               </p>
-                            </div>
-                          )}
+                          </div>
                         </div>
                       )}
                       </div>
