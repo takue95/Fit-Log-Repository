@@ -499,7 +499,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
   return (
     <div className="flex flex-col gap-4 pb-12 animate-in fade-in duration-200">
       {/* Top Floating Control Bar */}
-      <div className="sticky z-30 -mx-4 px-4 py-3 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 flex items-center justify-between shadow-lg" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}">
+      <div className="sticky z-30 -mx-4 px-4 py-3 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 flex items-center justify-between shadow-lg" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => {

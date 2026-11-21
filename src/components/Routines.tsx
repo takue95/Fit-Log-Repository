@@ -264,7 +264,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
         </button>
       </div>
 
-      <div className="sticky z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}">
+      <div className="sticky z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}>
         <div className="flex rounded-xl border border-neutral-800 bg-neutral-950 p-1">
           <button
             onClick={() => {
