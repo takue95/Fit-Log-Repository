@@ -110,6 +110,7 @@ interface RoutinesProps {
   activeWorkout: ActiveWorkout | null;
   onStartRoutine: (routine: RoutineTemplate) => void;
   onSaveRoutine: (routine: RoutineTemplate) => void;
+  onUpdateRoutine: (routine: RoutineTemplate) => void;
   onDeleteRoutine: (routineId: string) => void;
   onOpenExercisePicker: () => void;
 }
@@ -156,6 +157,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   activeWorkout,
   onStartRoutine,
   onSaveRoutine,
+  onUpdateRoutine,
   onDeleteRoutine
 }) => {
   const [selectedSplit, setSelectedSplit] = useState<string>(() => {
@@ -179,7 +181,42 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   });
   const [isCreatingRoutine, setIsCreatingRoutine] = useState<boolean>(false);
   const [viewingRoutine, setViewingRoutine] = useState<RoutineTemplate | null>(null);
+  const [isEditingViewingRoutine, setIsEditingViewingRoutine] = useState(false);
+  const [exerciseToAdd, setExerciseToAdd] = useState('');
   const [routineVideoExerciseId, setRoutineVideoExerciseId] = useState<string | null>(null);
+
+  const openRoutinePreview = (routine: RoutineTemplate) => {
+    setViewingRoutine({ ...routine, exercises: routine.exercises.map((item) => ({ ...item })) });
+    setIsEditingViewingRoutine(false);
+    setExerciseToAdd('');
+    setRoutineVideoExerciseId(null);
+  };
+
+  const addExerciseToViewedRoutine = () => {
+    if (!viewingRoutine || !exerciseToAdd) return;
+    const exercise = exercises.find((item) => item.id === exerciseToAdd);
+    if (!exercise || viewingRoutine.exercises.some((item) => item.exerciseId === exercise.id)) return;
+    setViewingRoutine({
+      ...viewingRoutine,
+      exercises: [...viewingRoutine.exercises, { exerciseId: exercise.id, defaultSets: 3, defaultReps: 10 }]
+    });
+    setExerciseToAdd('');
+  };
+
+  const removeExerciseFromViewedRoutine = (exerciseId: string) => {
+    if (!viewingRoutine) return;
+    setViewingRoutine({
+      ...viewingRoutine,
+      exercises: viewingRoutine.exercises.filter((item) => item.exerciseId !== exerciseId)
+    });
+    if (routineVideoExerciseId === exerciseId) setRoutineVideoExerciseId(null);
+  };
+
+  const saveViewedRoutine = () => {
+    if (!viewingRoutine || viewingRoutine.exercises.length === 0) return;
+    onUpdateRoutine(viewingRoutine);
+    setIsEditingViewingRoutine(false);
+  };
 
   useEffect(() => {
     try {
@@ -364,11 +401,11 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
             <div
               role="button"
               tabIndex={0}
-              onClick={() => setViewingRoutine(routine)}
+              onClick={() => openRoutinePreview(routine)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  setViewingRoutine(routine);
+                  openRoutinePreview(routine);
                 }
               }}
               className="cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
@@ -431,7 +468,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
             </div>
 
             <button
-              onClick={() => setViewingRoutine(routine)}
+              onClick={() => openRoutinePreview(routine)}
               className="flex items-center justify-between border-t border-neutral-800/80 pt-3 text-left text-xs font-semibold text-neutral-300 transition hover:text-emerald-300"
             >
               <span>Open workout plan</span>
@@ -461,16 +498,31 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <button
-                onClick={() => {
-                  onStartRoutine(viewingRoutine);
-                  setViewingRoutine(null);
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
-              >
-                <Play className="h-4 w-4 fill-current" />
-                Start Workout
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingViewingRoutine((editing) => !editing)}
+                  className={`flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${
+                    isEditingViewingRoutine
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                      : 'border-neutral-700 bg-neutral-950 text-neutral-200 hover:border-emerald-700'
+                  }`}
+                >
+                  <Dumbbell className="h-4 w-4" />
+                  {isEditingViewingRoutine ? 'Editing' : 'Customize'}
+                </button>
+                <button
+                  onClick={() => {
+                    onStartRoutine(viewingRoutine);
+                    setViewingRoutine(null);
+                    setIsEditingViewingRoutine(false);
+                  }}
+                  className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-3 text-xs font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
+                >
+                  <Play className="h-4 w-4 shrink-0 fill-current" />
+                  <span className="truncate">{isEditingViewingRoutine ? 'Start with these exercises' : 'Start Workout'}</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 rounded-2xl border border-neutral-800 bg-neutral-950 p-3.5">
@@ -480,6 +532,50 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                 <p className="mt-1 text-xs leading-relaxed text-neutral-300">{viewingRoutine.description}</p>
               </div>
             </div>
+
+            {isEditingViewingRoutine && (
+              <section className="space-y-3 rounded-2xl border border-emerald-800/50 bg-emerald-950/20 p-3.5">
+                <div>
+                  <h4 className="text-xs font-bold text-white">Customize this workout</h4>
+                  <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">
+                    Changes apply to this session when you start. Save to routine to keep them next time. Keep at least one exercise.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={exerciseToAdd}
+                    onChange={(event) => setExerciseToAdd(event.target.value)}
+                    className="min-h-10 min-w-0 flex-1 rounded-xl border border-neutral-700 bg-neutral-950 px-3 text-xs text-neutral-100 outline-none focus:border-emerald-500"
+                    aria-label="Choose an exercise to add"
+                  >
+                    <option value="">Add an exercise…</option>
+                    {exercises
+                      .filter((exercise) => !viewingRoutine.exercises.some((item) => item.exerciseId === exercise.id))
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((exercise) => (
+                        <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addExerciseToViewedRoutine}
+                    disabled={!exerciseToAdd}
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-500 px-3 text-xs font-bold text-neutral-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={saveViewedRoutine}
+                  disabled={viewingRoutine.exercises.length === 0}
+                  className="w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-xs font-bold text-neutral-200 transition hover:border-emerald-700 hover:text-emerald-300 disabled:opacity-40"
+                >
+                  Save changes to routine
+                </button>
+              </section>
+            )}
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
@@ -507,7 +603,8 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                           </div>
                         </div>
 
-                        <div className="shrink-0 text-right font-mono">
+                        <div className="flex shrink-0 items-center gap-2">
+                          <div className="text-right font-mono">
                           <span className="font-bold text-emerald-400">
                             {re.defaultSets} sets × {re.defaultReps} reps
                           </span>
@@ -515,6 +612,19 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                             <span className="block text-[10px] text-neutral-400">
                               RPE {re.targetRpe}
                             </span>
+                          )}
+                          </div>
+                          {isEditingViewingRoutine && (
+                            <button
+                              type="button"
+                              onClick={() => removeExerciseFromViewedRoutine(re.exerciseId)}
+                              disabled={viewingRoutine.exercises.length <= 1}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-30"
+                              aria-label={`Remove ${ex?.name || re.exerciseId} from this workout`}
+                              title={viewingRoutine.exercises.length <= 1 ? 'A workout needs at least one exercise' : 'Remove exercise'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           )}
                         </div>
                       </div>

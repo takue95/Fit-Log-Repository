@@ -745,6 +745,12 @@ export default function App() {
     setRoutines((prev) => [newRoutine, ...prev]);
   };
 
+  const handleUpdateRoutine = (updatedRoutine: RoutineTemplate) => {
+    setRoutines((previous) => previous.map((routine) =>
+      routine.id === updatedRoutine.id ? updatedRoutine : routine
+    ));
+  };
+
   const handleDeleteRoutine = (id: string) => {
     setRoutines((prev) => prev.filter((r) => r.id !== id));
   };
@@ -1026,6 +1032,7 @@ export default function App() {
               activeWorkout={activeWorkout}
               onStartRoutine={handleStartRoutine}
               onSaveRoutine={handleSaveRoutine}
+              onUpdateRoutine={handleUpdateRoutine}
               onDeleteRoutine={handleDeleteRoutine}
               onOpenExercisePicker={() => setIsExercisePickerOpen(true)}
             />
