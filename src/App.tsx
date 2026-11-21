@@ -62,7 +62,7 @@ export default function App() {
     if (!header) return;
 
     const updateHeaderHeight = () => {
-      const height = Math.ceil(header.getBoundingClientRect().height);
+      const height = header.getBoundingClientRect().height;
       document.documentElement.style.setProperty('--fitlog-app-header-height', `${height}px`);
     };
 
