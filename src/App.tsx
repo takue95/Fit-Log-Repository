@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Home, Dumbbell, PlusCircle, TrendingUp, History, Activity, UserRound, Cloud, RefreshCw } from 'lucide-react';
 import { 
   RoutineTemplate,
@@ -55,6 +55,29 @@ const loadExerciseLibrary = (): Exercise[] => {
 };
 
 export default function App() {
+  const appHeaderRef = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const header = appHeaderRef.current;
+    if (!header) return;
+
+    const updateHeaderHeight = () => {
+      const height = Math.ceil(header.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--fitlog-app-header-height', `${height}px`);
+    };
+
+    updateHeaderHeight();
+    const observer = new ResizeObserver(updateHeaderHeight);
+    observer.observe(header);
+    window.addEventListener('resize', updateHeaderHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+      document.documentElement.style.removeProperty('--fitlog-app-header-height');
+    };
+  }, []);
+
   // Navigation: 0 = Dashboard, 1 = Routines, 2 = Active Workout, 3 = Analytics, 4 = History & Settings
   const [currentScreen, setCurrentScreen] = useState<number>(0);
   const [historyInitialTab, setHistoryInitialTab] = useState<'history' | 'exercises' | 'settings'>('history');
@@ -775,7 +798,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0d100e] text-neutral-100 flex flex-col items-center justify-start pb-24">
-      <header className="sticky top-0 z-40 w-full max-w-[430px] border-b border-neutral-800/80 bg-neutral-950/95 px-4 pb-2.5 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-md">
+      <header ref={appHeaderRef} className="sticky top-0 z-40 w-full max-w-[430px] border-b border-neutral-800/80 bg-neutral-950/95 px-4 pb-2.5 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-800/70 bg-emerald-900/50 text-emerald-300">

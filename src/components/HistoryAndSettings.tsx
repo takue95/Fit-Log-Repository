@@ -229,7 +229,7 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
         <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
       </div>
 
-      <div className="sticky top-[calc(6.25rem+env(safe-area-inset-top))] z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
+      <div className="sticky z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}">
         <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
           {([
             { id: 'history', label: 'Workouts', icon: History },
