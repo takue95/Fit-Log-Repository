@@ -21,6 +21,7 @@ export interface FitLogDriveData {
   exercises: Exercise[];
   routines: RoutineTemplate[];
   history: CompletedWorkout[];
+  deletedHistoryIds?: string[];
   bodyWeights: BodyWeightEntry[];
   settings: UserSettings;
   activeWorkout: ActiveWorkout | null;
@@ -250,13 +251,21 @@ export function mergeDriveData(
 ): FitLogDriveData {
   const preferred = preferCloud ? cloud : local;
   const secondary = preferCloud ? local : cloud;
+  const deletedHistoryIds = Array.from(new Set([
+    ...(cloud.deletedHistoryIds || []),
+    ...(local.deletedHistoryIds || [])
+  ]));
+  const deletedHistoryIdSet = new Set(deletedHistoryIds);
+
   return {
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     exercises: mergeById(preferred.exercises || [], secondary.exercises || []),
     routines: mergeById(preferred.routines || [], secondary.routines || []),
     history: mergeById(local.history || [], cloud.history || [])
+      .filter((workout) => !deletedHistoryIdSet.has(workout.id))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    deletedHistoryIds,
     bodyWeights: mergeById(local.bodyWeights || [], cloud.bodyWeights || [])
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     settings: preferred.settings || secondary.settings,
@@ -265,6 +274,6 @@ export function mergeDriveData(
 }
 
 export function sameDriveData(a: FitLogDriveData, b: FitLogDriveData): boolean {
-  return ['exercises', 'routines', 'history', 'bodyWeights', 'settings', 'activeWorkout']
+  return ['exercises', 'routines', 'history', 'deletedHistoryIds', 'bodyWeights', 'settings', 'activeWorkout']
     .every((key) => JSON.stringify(a[key as keyof FitLogDriveData]) === JSON.stringify(b[key as keyof FitLogDriveData]));
 }

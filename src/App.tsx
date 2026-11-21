@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
   EXERCISES: 'fitlog_exercises_v1',
   ROUTINES: 'fitlog_routines_v1',
   HISTORY: 'fitlog_history_v1',
+  DELETED_HISTORY_IDS: 'fitlog_deleted_history_ids_v1',
   BODY_WEIGHTS: 'fitlog_body_weights_v1',
   ACTIVE_WORKOUT: 'fitlog_active_workout_v1',
   SETTINGS: 'fitlog_settings_v1',
@@ -116,6 +117,17 @@ export default function App() {
     }
   });
 
+  const [deletedHistoryIds, setDeletedHistoryIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DELETED_HISTORY_IDS);
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? Array.from(new Set(parsed.filter((id): id is string => typeof id === 'string'))) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [bodyWeights, setBodyWeights] = useState<BodyWeightEntry[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.BODY_WEIGHTS);
     if (!saved) return [];
@@ -183,6 +195,7 @@ export default function App() {
     exercises,
     routines,
     history,
+    deletedHistoryIds,
     bodyWeights,
     settings,
     activeWorkout
@@ -192,6 +205,7 @@ export default function App() {
     exercises,
     routines,
     history,
+    deletedHistoryIds,
     bodyWeights,
     settings,
     activeWorkout
@@ -209,6 +223,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.DELETED_HISTORY_IDS, JSON.stringify(deletedHistoryIds));
+  }, [deletedHistoryIds]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.BODY_WEIGHTS, JSON.stringify(bodyWeights));
@@ -230,6 +248,7 @@ export default function App() {
     setExercises(data.exercises);
     setRoutines(data.routines);
     setHistory(data.history);
+    setDeletedHistoryIds(data.deletedHistoryIds ?? []);
     setBodyWeights(data.bodyWeights);
     setSettings(data.settings);
     setActiveWorkout(data.activeWorkout ?? null);
@@ -374,7 +393,7 @@ export default function App() {
     }
     const timeout = window.setTimeout(() => void syncDriveData(false), 1200);
     return () => window.clearTimeout(timeout);
-  }, [driveToken, history, routines, exercises, bodyWeights, settings, activeWorkout, syncDriveData]);
+  }, [driveToken, history, deletedHistoryIds, routines, exercises, bodyWeights, settings, activeWorkout, syncDriveData]);
 
   useEffect(() => {
     if (!driveToken || driveSyncPulse === 0) return;
@@ -670,6 +689,7 @@ export default function App() {
       exercises,
       routines,
       history: nextHistory,
+      deletedHistoryIds,
       bodyWeights,
       settings,
       activeWorkout: null
@@ -783,7 +803,8 @@ export default function App() {
   };
 
   const handleDeleteHistoryItem = (id: string) => {
-    setHistory((prev) => prev.filter((h) => h.id !== id));
+    setDeletedHistoryIds((previous) => previous.includes(id) ? previous : [...previous, id]);
+    setHistory((previous) => previous.filter((workout) => workout.id !== id));
   };
 
   // Data Export & Import
