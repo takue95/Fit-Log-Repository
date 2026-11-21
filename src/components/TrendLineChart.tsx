@@ -13,6 +13,20 @@ interface TrendLineChartProps {
   latestPointColor?: string;
 }
 
+const smoothPath = (coordinates: { x: number; y: number }[]) => {
+  if (coordinates.length < 2) return '';
+  return coordinates.slice(0, -1).reduce((path, point, index) => {
+    const previous = coordinates[Math.max(0, index - 1)];
+    const next = coordinates[index + 1];
+    const afterNext = coordinates[Math.min(coordinates.length - 1, index + 2)];
+    const control1X = point.x + (next.x - previous.x) / 6;
+    const control1Y = point.y + (next.y - previous.y) / 6;
+    const control2X = next.x - (afterNext.x - point.x) / 6;
+    const control2Y = next.y - (afterNext.y - point.y) / 6;
+    return `${path} C ${control1X},${control1Y} ${control2X},${control2Y} ${next.x},${next.y}`;
+  }, `M ${coordinates[0].x},${coordinates[0].y}`);
+};
+
 const toLocalDate = (value: string) => {
   const datePart = value.slice(0, 10);
   return new Date(`${datePart}T12:00:00`);
@@ -38,8 +52,10 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({ points, unit, la
     const y = bottom - ((point.value - minValue) / valueRange) * (bottom - top);
     return { ...point, x, y };
   });
-  const line = coordinates.map(({ x, y }) => `${x},${y}`).join(' ');
-  const area = coordinates.length > 1 ? `${left},${bottom} ${line} ${right},${bottom}` : '';
+  const line = smoothPath(coordinates);
+  const area = coordinates.length > 1
+    ? `${line} L ${coordinates[coordinates.length - 1].x},${bottom} L ${coordinates[0].x},${bottom} Z`
+    : '';
   const formatDate = (date: string) => toLocalDate(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   if (!points.length) {
@@ -71,21 +87,25 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({ points, unit, la
             </g>
           );
         })}
-        {coordinates.length > 1 && <polygon points={area} fill={`url(#${gradientId})`} />}
-        {coordinates.length > 1 && <polyline points={line} fill="none" stroke="#71b593" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-        {coordinates.map((point, index) => (
+        {coordinates.length > 1 && <path d={area} fill={`url(#${gradientId})`} />}
+        {coordinates.length > 1 && (
+          <>
+            <path d={line} fill="none" stroke="#71b593" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" />
+            <path d={line} fill="none" stroke="#8bd5ad" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        )}
+        {coordinates.length > 0 && (
           <circle
-            key={`${point.date}-${index}`}
-            cx={point.x}
-            cy={point.y}
-            r={index === coordinates.length - 1 ? 5 : 3.5}
-            fill={index === coordinates.length - 1 ? latestPointColor : '#71b593'}
+            cx={coordinates[coordinates.length - 1].x}
+            cy={coordinates[coordinates.length - 1].y}
+            r="5"
+            fill={latestPointColor}
             stroke="#0a0a0a"
             strokeWidth="2"
           >
-            <title>{`${formatDate(point.date)}: ${point.value} ${unit}`}</title>
+            <title>{`${formatDate(points[points.length - 1].date)}: ${points[points.length - 1].value} ${unit}`}</title>
           </circle>
-        ))}
+        )}
         <text x={left} y={height - 7} textAnchor="start" fill="#737373" fontSize="9">{formatDate(points[0].date)}</text>
         {points.length > 1 && <text x={right} y={height - 7} textAnchor="end" fill="#737373" fontSize="9">{formatDate(points[points.length - 1].date)}</text>}
         <text x={right} y={12} textAnchor="end" fill="#737373" fontSize="9">{unit}</text>

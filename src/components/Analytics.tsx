@@ -164,9 +164,26 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
   };
   const dateToY = (value: number) => chartHeight - paddingY - ((value - minVal) / Math.max(1, maxVal - minVal)) * (chartHeight - paddingY * 2);
 
-  const pointsString = progressionData
-    .map((point) => `${dateToX(point.dateISO)},${dateToY(point.estimated1RM)}`)
-    .join(' ');
+  const chartPoints = progressionData.map((point) => ({
+    x: dateToX(point.dateISO),
+    y: dateToY(point.estimated1RM)
+  }));
+  const linePath = chartPoints.length > 1
+    ? chartPoints.slice(0, -1).reduce((path, point, index) => {
+        const previous = chartPoints[Math.max(0, index - 1)];
+        const next = chartPoints[index + 1];
+        const afterNext = chartPoints[Math.min(chartPoints.length - 1, index + 2)];
+        const control1X = point.x + (next.x - previous.x) / 6;
+        const control1Y = point.y + (next.y - previous.y) / 6;
+        const control2X = next.x - (afterNext.x - point.x) / 6;
+        const control2Y = next.y - (afterNext.y - point.y) / 6;
+        return `${path} C ${control1X},${control1Y} ${control2X},${control2Y} ${next.x},${next.y}`;
+      }, `M ${chartPoints[0].x},${chartPoints[0].y}`)
+    : chartPoints.length ? `M ${chartPoints[0].x},${chartPoints[0].y}` : '';
+  const areaPath = chartPoints.length > 1
+    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x},${chartHeight - paddingY} L ${chartPoints[0].x},${chartHeight - paddingY} Z`
+    : '';
+
 
   const formatAxisDate = (date: Date) => date.toLocaleDateString(undefined, {
     month: 'short',
@@ -467,14 +484,13 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
             })}
 
             {/* Area fill */}
+            {progressionData.length > 1 && <path d={areaPath} fill="url(#chartGradient)" />}
             {progressionData.length > 1 && (
-              <polygon
-                points={`${paddingX},${chartHeight - paddingY} ${pointsString} ${rightX},${chartHeight - paddingY}`}
-                fill="url(#chartGradient)"
-              />
+              <>
+                <path d={linePath} fill="none" stroke="#71b593" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" />
+                <path d={linePath} fill="none" stroke="#8bd5ad" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </>
             )}
-
-            {progressionData.length > 1 && <polyline fill="none" stroke="#71b593" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={pointsString} />}
 
             {progressionData.map((point, index) => {
               const isLast = index === progressionData.length - 1;
@@ -485,10 +501,10 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({
                   <circle
                     cx={dateToX(point.dateISO)}
                     cy={dateToY(point.estimated1RM)}
-                    r={isSelected ? 6 : isLast ? 4.5 : 3.5}
-                    fill={isSelected ? '#7bd4a0' : isLast ? '#4fbd80' : '#71b593'}
-                    stroke={isSelected ? '#4fbd80' : '#0a0a0a'}
-                    strokeWidth={isSelected ? 3 : 2}
+                    r={isSelected ? 6 : isLast ? 4.5 : 8}
+                    fill={isSelected ? '#a3e6bd' : isLast ? '#71c99a' : 'transparent'}
+                    stroke={isSelected ? '#4fbd80' : isLast ? '#0a0a0a' : 'transparent'}
+                    strokeWidth={isSelected ? 3 : isLast ? 2 : 0}
                     role="button"
                     tabIndex={0}
                     aria-label={pointLabel}
