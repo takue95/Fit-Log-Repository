@@ -122,6 +122,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
   const [historyExerciseId, setHistoryExerciseId] = useState<string | null>(null);
   const [videoPreviewExerciseId, setVideoPreviewExerciseId] = useState<string | null>(null);
+  const [techniqueControlsVisible, setTechniqueControlsVisible] = useState(false);
+  const techniqueVideoRef = useRef<HTMLVideoElement | null>(null);
   const [activeMenuExerciseId, setActiveMenuExerciseId] = useState<string | null>(null);
   
   // Mid-workout exercise swapping
@@ -705,11 +707,17 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                 <div className="border-b border-neutral-800/80">
                   <button
                     type="button"
-                    onClick={() =>
-                      setVideoPreviewExerciseId(
-                        videoPreviewExerciseId === exercise.id ? null : exercise.id
-                      )
-                    }
+                    onClick={() => {
+                      if (videoPreviewExerciseId === exercise.id) {
+                        techniqueVideoRef.current?.pause();
+                        if (techniqueVideoRef.current) techniqueVideoRef.current.currentTime = 0;
+                        setTechniqueControlsVisible(false);
+                        setVideoPreviewExerciseId(null);
+                      } else {
+                        setTechniqueControlsVisible(false);
+                        setVideoPreviewExerciseId(exercise.id);
+                      }
+                    }}
                     aria-expanded={videoPreviewExerciseId === exercise.id}
                     aria-controls={`exercise-video-${exercise.id}`}
                     className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-neutral-800/40"
@@ -720,7 +728,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                       </span>
                       <span className="min-w-0">
                         <span className="block text-xs font-semibold text-neutral-100">Watch technique</span>
-                        <span className="mt-0.5 block text-[10px] text-neutral-400">Optional bench press video</span>
+                        <span className="mt-0.5 block text-[10px] text-neutral-400">Loops automatically · tap video for controls</span>
                       </span>
                     </span>
                     <ChevronDown
@@ -729,11 +737,22 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     />
                   </button>
                   {videoPreviewExerciseId === exercise.id && (
-                    <div id={`exercise-video-${exercise.id}`} className="border-t border-neutral-800 bg-neutral-950/40 p-3">
+                    <div
+                      id={`exercise-video-${exercise.id}`}
+                      className="border-t border-neutral-800 bg-neutral-950/40 p-3"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setTechniqueControlsVisible(true);
+                      }}
+                    >
                       <video
-                        controls
+                        ref={techniqueVideoRef}
+                        autoPlay
+                        loop
+                        muted
+                        controls={techniqueControlsVisible}
                         playsInline
-                        preload="none"
+                        preload="auto"
                         className="mx-auto block max-h-[420px] w-full rounded-xl bg-black object-contain"
                         aria-label="Barbell bench press technique demonstration"
                       >
@@ -743,9 +762,6 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                         />
                         Your browser does not support embedded video.
                       </video>
-                      <p className="mt-2 text-center text-[10px] text-neutral-500">
-                        Tap play when you want to preview the movement.
-                      </p>
                     </div>
                   )}
                 </div>
