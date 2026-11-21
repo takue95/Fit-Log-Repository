@@ -1033,6 +1033,7 @@ export default function App() {
               onStartRoutine={handleStartRoutine}
               onSaveRoutine={handleSaveRoutine}
               onUpdateRoutine={handleUpdateRoutine}
+              onAddCustomExercise={(exercise) => setExercises((previous) => [exercise, ...previous])}
               onDeleteRoutine={handleDeleteRoutine}
               onOpenExercisePicker={() => setIsExercisePickerOpen(true)}
             />
