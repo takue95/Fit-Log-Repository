@@ -740,10 +740,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutProps> = ({
                     <div
                       id={`exercise-video-${exercise.id}`}
                       className="border-t border-neutral-800 bg-neutral-950/40 p-3"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        setTechniqueControlsVisible(true);
-                      }}
+                      onClick={() => setTechniqueControlsVisible(true)}
                     >
                       <video
                         ref={techniqueVideoRef}
