@@ -14,8 +14,6 @@ import {
   Target,
   Search,
   GripVertical,
-  ArrowUp,
-  ArrowDown
 } from 'lucide-react';
 import { RoutineTemplate, Exercise, CompletedWorkout, ActiveWorkout, MuscleGroup, EquipmentType, MUSCLE_GROUPS, EQUIPMENT_TYPES } from '../types/fitness';
 import { NumericInput } from './NumericInput';
@@ -194,6 +192,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   const [newWorkoutExerciseCategory, setNewWorkoutExerciseCategory] = useState<MuscleGroup>('Chest');
   const [newWorkoutExerciseEquipment, setNewWorkoutExerciseEquipment] = useState<EquipmentType>('Barbell');
   const [draggingExerciseId, setDraggingExerciseId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ exerciseId: string; position: 'before' | 'after' } | null>(null);
   const [routineVideoExerciseId, setRoutineVideoExerciseId] = useState<string | null>(null);
 
   const openRoutinePreview = (routine: RoutineTemplate) => {
@@ -204,6 +203,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     setNewWorkoutExerciseName('');
     setRoutineVideoExerciseId(null);
     setDraggingExerciseId(null);
+    setDropTarget(null);
   };
 
   const addExerciseToViewedRoutine = (exercise: Exercise) => {
@@ -233,14 +233,15 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     setIsCreatingWorkoutExercise(false);
   };
 
-  const reorderViewedExercise = (fromId: string, toId: string) => {
+  const reorderViewedExercise = (fromId: string, toId: string, position: 'before' | 'after' = 'before') => {
     if (!viewingRoutine || fromId === toId) return;
     const exercisesInOrder = [...viewingRoutine.exercises];
     const fromIndex = exercisesInOrder.findIndex((item) => item.exerciseId === fromId);
-    const toIndex = exercisesInOrder.findIndex((item) => item.exerciseId === toId);
-    if (fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex < 0) return;
     const [moved] = exercisesInOrder.splice(fromIndex, 1);
-    exercisesInOrder.splice(toIndex, 0, moved);
+    const targetIndex = exercisesInOrder.findIndex((item) => item.exerciseId === toId);
+    if (targetIndex < 0) return;
+    exercisesInOrder.splice(targetIndex + (position === 'after' ? 1 : 0), 0, moved);
     setViewingRoutine({ ...viewingRoutine, exercises: exercisesInOrder });
   };
 
@@ -249,7 +250,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     const index = viewingRoutine.exercises.findIndex((item) => item.exerciseId === exerciseId);
     const target = viewingRoutine.exercises[index + direction];
     if (index < 0 || !target) return;
-    reorderViewedExercise(exerciseId, target.exerciseId);
+    reorderViewedExercise(exerciseId, target.exerciseId, direction < 0 ? 'before' : 'after');
   };
 
   const handleExerciseDragPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -257,7 +258,25 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     const row = document.elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>('[data-routine-exercise-id]');
     const targetId = row?.dataset.routineExerciseId;
-    if (targetId && targetId !== draggingExerciseId) reorderViewedExercise(draggingExerciseId, targetId);
+    if (!targetId || targetId === draggingExerciseId) {
+      setDropTarget(null);
+      return;
+    }
+    const bounds = row.getBoundingClientRect();
+    const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+    setDropTarget((previous) =>
+      previous?.exerciseId === targetId && previous.position === position
+        ? previous
+        : { exerciseId: targetId, position }
+    );
+  };
+
+  const finishExerciseDrag = () => {
+    if (draggingExerciseId && dropTarget) {
+      reorderViewedExercise(draggingExerciseId, dropTarget.exerciseId, dropTarget.position);
+    }
+    setDraggingExerciseId(null);
+    setDropTarget(null);
   };
 
   const matchingExercises = viewingRoutine
@@ -715,86 +734,84 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 Exercise Schedule ({viewingRoutine.exercises.length})
               </h4>
-              <div className="divide-y divide-neutral-800/80 bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden">
+              <div className="space-y-2">
                 {viewingRoutine.exercises.map((re, idx) => {
                   const ex = exercises.find((e) => e.id === re.exerciseId);
                   const hasBenchPressVideo = re.exerciseId === 'barbell-bench-press';
                   const isVideoOpen = routineVideoExerciseId === re.exerciseId;
                   return (
-                    <div
-                      key={re.exerciseId}
-                      data-routine-exercise-id={re.exerciseId}
-                      className={`p-3 space-y-2 text-xs transition ${
-                        draggingExerciseId === re.exerciseId ? 'bg-emerald-500/10 opacity-70' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          {isEditingViewingRoutine && (
-                            <div className="flex shrink-0 flex-col items-center gap-0.5">
-                              <button
-                                type="button"
-                                onPointerDown={(event) => {
-                                  event.preventDefault();
-                                  setDraggingExerciseId(re.exerciseId);
-                                  event.currentTarget.setPointerCapture(event.pointerId);
-                                }}
-                                onPointerMove={handleExerciseDragPointerMove}
-                                onPointerUp={() => setDraggingExerciseId(null)}
-                                onPointerCancel={() => setDraggingExerciseId(null)}
-                                className="flex h-7 w-8 cursor-grab touch-none items-center justify-center rounded-md text-neutral-400 active:cursor-grabbing hover:bg-neutral-800"
-                                title="Drag to change exercise priority"
-                                aria-label={`Drag ${ex?.name || re.exerciseId} to change priority`}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
-                              <div className="flex">
-                                <button type="button" onClick={() => moveViewedExercise(re.exerciseId, -1)} disabled={idx === 0} className="rounded p-0.5 text-neutral-500 hover:text-emerald-300 disabled:opacity-25" aria-label="Move exercise up"><ArrowUp className="h-3 w-3" /></button>
-                                <button type="button" onClick={() => moveViewedExercise(re.exerciseId, 1)} disabled={idx === viewingRoutine.exercises.length - 1} className="rounded p-0.5 text-neutral-500 hover:text-emerald-300 disabled:opacity-25" aria-label="Move exercise down"><ArrowDown className="h-3 w-3" /></button>
-                              </div>
-                            </div>
-                          )}
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-[10px] font-bold text-emerald-400">
-                            {idx + 1}
+                    <React.Fragment key={re.exerciseId}>
+                      {isEditingViewingRoutine && dropTarget?.exerciseId === re.exerciseId && dropTarget.position === 'before' && (
+                        <div className="mx-3 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
+                      )}
+                      <div
+                        data-routine-exercise-id={re.exerciseId}
+                        className={`flex flex-col gap-2 rounded-2xl border p-3 text-xs transition-all duration-150 ${
+                          draggingExerciseId === re.exerciseId
+                            ? 'scale-[1.02] border-emerald-400 bg-emerald-500/10 opacity-80 shadow-xl shadow-black/30'
+                            : 'border-neutral-800 bg-neutral-900/70'
+                        }`}
+                      >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        {isEditingViewingRoutine && (
+                          <button
+                            type="button"
+                            onPointerDown={(event) => {
+                              event.preventDefault();
+                              setDraggingExerciseId(re.exerciseId);
+                              event.currentTarget.setPointerCapture(event.pointerId);
+                            }}
+                            onPointerMove={handleExerciseDragPointerMove}
+                            onPointerUp={finishExerciseDrag}
+                            onPointerCancel={() => {
+                              setDraggingExerciseId(null);
+                              setDropTarget(null);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === 'ArrowUp' && idx > 0) {
+                                event.preventDefault();
+                                moveViewedExercise(re.exerciseId, -1);
+                              }
+                              if (event.key === 'ArrowDown' && idx < viewingRoutine.exercises.length - 1) {
+                                event.preventDefault();
+                                moveViewedExercise(re.exerciseId, 1);
+                              }
+                            }}
+                            className="flex h-10 w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl border border-emerald-800/60 bg-emerald-950/30 text-emerald-300 transition active:cursor-grabbing hover:bg-emerald-950/60"
+                            aria-label={`Drag ${ex?.name || re.exerciseId} to change priority. Use arrow keys to reorder.`}
+                            aria-grabbed={draggingExerciseId === re.exerciseId}
+                            title="Hold and drag to reorder"
+                          >
+                            <GripVertical className="h-5 w-5" />
+                          </button>
+                        )}
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-950/60 text-xs font-extrabold tabular-nums text-emerald-300">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="block truncate font-bold text-white">{ex?.name || re.exerciseId}</span>
+                          <span className="mt-0.5 block truncate text-[11px] text-neutral-400">
+                            {ex?.equipment} · {re.defaultSets} sets × {re.defaultReps} reps{re.targetRpe ? ` · RPE ${re.targetRpe}` : ''}
                           </span>
-                          <div className="min-w-0">
-                            <span className="block truncate font-bold text-white">
-                              {ex?.name || re.exerciseId}
-                            </span>
-                            <span className="text-[11px] text-neutral-400">
-                              {ex?.category} • {ex?.equipment}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-2">
-                          <div className="text-right font-mono">
-                          <span className="font-bold text-emerald-400">
-                            {re.defaultSets} sets × {re.defaultReps} reps
-                          </span>
-                          {re.targetRpe && (
-                            <span className="block text-[10px] text-neutral-400">
-                              RPE {re.targetRpe}
-                            </span>
-                          )}
-                          </div>
-                          {isEditingViewingRoutine && (
-                            <button
-                              type="button"
-                              onClick={() => removeExerciseFromViewedRoutine(re.exerciseId)}
-                              disabled={viewingRoutine.exercises.length <= 1}
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-30"
-                              aria-label={`Remove ${ex?.name || re.exerciseId} from this workout`}
-                              title={viewingRoutine.exercises.length <= 1 ? 'A workout needs at least one exercise' : 'Remove exercise'}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
                         </div>
                       </div>
+                      {isEditingViewingRoutine && (
+                        <button
+                          type="button"
+                          onClick={() => removeExerciseFromViewedRoutine(re.exerciseId)}
+                          disabled={viewingRoutine.exercises.length <= 1}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-neutral-500 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label={`Remove ${ex?.name || re.exerciseId} from this workout`}
+                          title={viewingRoutine.exercises.length <= 1 ? 'A workout needs at least one exercise' : 'Remove exercise'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
 
                       {hasBenchPressVideo && (
-                        <div className="pl-7">
+                        <div className="pl-[52px]">
                           <button
                             type="button"
                             onClick={() => setRoutineVideoExerciseId(isVideoOpen ? null : re.exerciseId)}
@@ -828,7 +845,11 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                           )}
                         </div>
                       )}
-                    </div>
+                      </div>
+                      {isEditingViewingRoutine && dropTarget?.exerciseId === re.exerciseId && dropTarget.position === 'after' && (
+                        <div className="mx-3 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
