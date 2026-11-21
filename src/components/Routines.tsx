@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { 
   Plus, 
   Play, 
@@ -193,6 +193,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   const [newWorkoutExerciseEquipment, setNewWorkoutExerciseEquipment] = useState<EquipmentType>('Barbell');
   const [draggingExerciseId, setDraggingExerciseId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ exerciseId: string; position: 'before' | 'after' } | null>(null);
+  const pendingExercisePositions = useRef<Map<string, DOMRect> | null>(null);
   const [routineVideoExerciseId, setRoutineVideoExerciseId] = useState<string | null>(null);
 
   const openRoutinePreview = (routine: RoutineTemplate) => {
@@ -241,6 +242,15 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     const [moved] = exercisesInOrder.splice(fromIndex, 1);
     const targetIndex = exercisesInOrder.findIndex((item) => item.exerciseId === toId);
     if (targetIndex < 0) return;
+    const list = document.querySelector<HTMLElement>('[data-routine-exercise-list]');
+    if (list) {
+      pendingExercisePositions.current = new Map(
+        Array.from(list.querySelectorAll<HTMLElement>('[data-routine-exercise-id]')).map((row) => [
+          row.dataset.routineExerciseId || '',
+          row.getBoundingClientRect()
+        ])
+      );
+    }
     exercisesInOrder.splice(targetIndex + (position === 'after' ? 1 : 0), 0, moved);
     setViewingRoutine({ ...viewingRoutine, exercises: exercisesInOrder });
   };
@@ -252,6 +262,33 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     if (index < 0 || !target) return;
     reorderViewedExercise(exerciseId, target.exerciseId, direction < 0 ? 'before' : 'after');
   };
+
+  useLayoutEffect(() => {
+    const previousPositions = pendingExercisePositions.current;
+    if (!previousPositions) return;
+    pendingExercisePositions.current = null;
+
+    const list = document.querySelector<HTMLElement>('[data-routine-exercise-list]');
+    if (!list || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    list.querySelectorAll<HTMLElement>('[data-routine-exercise-id]').forEach((row) => {
+      const id = row.dataset.routineExerciseId;
+      const previous = id ? previousPositions.get(id) : undefined;
+      if (!previous) return;
+      const current = row.getBoundingClientRect();
+      const deltaX = previous.left - current.left;
+      const deltaY = previous.top - current.top;
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+      if (typeof row.animate !== 'function') return;
+      row.animate(
+        [
+          { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
+          { transform: 'translate3d(0, 0, 0)' }
+        ],
+        { duration: 230, easing: 'cubic-bezier(0.2, 0.75, 0.25, 1)' }
+      );
+    });
+  }, [viewingRoutine?.exercises]);
 
   const handleExerciseDragPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (!draggingExerciseId) return;
@@ -734,21 +771,21 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 Exercise Schedule ({viewingRoutine.exercises.length})
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3" data-routine-exercise-list>
                 {viewingRoutine.exercises.map((re, idx) => {
                   const ex = exercises.find((e) => e.id === re.exerciseId);
                   const hasBenchPressVideo = re.exerciseId === 'barbell-bench-press';
                   const isVideoOpen = routineVideoExerciseId === re.exerciseId;
                   return (
-                    <React.Fragment key={re.exerciseId}>
+                    <div key={re.exerciseId} className="relative">
                       {isEditingViewingRoutine && dropTarget?.exerciseId === re.exerciseId && dropTarget.position === 'before' && (
-                        <div className="mx-3 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
+                        <div className="pointer-events-none absolute inset-x-3 -top-1 z-10 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
                       )}
                       <div
                         data-routine-exercise-id={re.exerciseId}
-                        className={`flex flex-col gap-2 rounded-2xl border p-3 text-xs transition-all duration-150 ${
+                        className={`flex flex-col gap-2 rounded-2xl border p-3 text-xs transition-[border-color,background-color,opacity,box-shadow] duration-200 ${
                           draggingExerciseId === re.exerciseId
-                            ? 'scale-[1.02] border-emerald-400 bg-emerald-500/10 opacity-80 shadow-xl shadow-black/30'
+                            ? 'border-emerald-400 bg-emerald-500/10 opacity-90 shadow-xl shadow-black/30 ring-1 ring-emerald-400/20'
                             : 'border-neutral-800 bg-neutral-900/70'
                         }`}
                       >
@@ -847,9 +884,9 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
                       )}
                       </div>
                       {isEditingViewingRoutine && dropTarget?.exerciseId === re.exerciseId && dropTarget.position === 'after' && (
-                        <div className="mx-3 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
+                        <div className="pointer-events-none absolute inset-x-3 -bottom-1 z-10 h-1 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" aria-hidden="true" />
                       )}
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </div>
