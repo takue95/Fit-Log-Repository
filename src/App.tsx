@@ -235,16 +235,29 @@ export default function App() {
     setActiveWorkout(data.activeWorkout ?? null);
   }, []);
 
-  const syncDriveData = useCallback(async (preferCloud: boolean) => {
-    if (!driveToken || driveSyncInProgress.current) return;
+  const driveSyncWaiters = useRef<Array<() => void>>([]);
+
+  const syncDriveData = useCallback(async (
+    preferCloud: boolean,
+    localOverride?: FitLogDriveData,
+    clearRemoteActiveWorkout = false
+  ): Promise<boolean> => {
+    if (!driveToken) return false;
+
+    while (driveSyncInProgress.current) {
+      await new Promise<void>((resolve) => driveSyncWaiters.current.push(resolve));
+      if (!driveToken) return false;
+    }
+
     driveSyncInProgress.current = true;
     setDriveSyncStatus('syncing');
     setDriveSyncMessage('');
 
     try {
       const remote = await loadDriveBackup(driveToken);
-      const local = driveDataRef.current;
+      const local = localOverride ?? driveDataRef.current;
       const merged = remote ? mergeDriveData(remote.data, local, preferCloud) : local;
+      if (clearRemoteActiveWorkout) merged.activeWorkout = null;
 
       if (!remote || !sameDriveData(merged, remote.data)) {
         await saveDriveBackup(driveToken, merged, remote?.file);
@@ -258,12 +271,15 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.DRIVE_LAST_SYNC, syncedAt);
       setDriveLastSyncedAt(syncedAt);
       setDriveSyncStatus('synced');
+      return true;
     } catch (error) {
       setDriveToken(null);
       setDriveSyncStatus('error');
       setDriveSyncMessage(error instanceof Error ? error.message : 'Could not sync with Google Drive.');
+      return false;
     } finally {
       driveSyncInProgress.current = false;
+      driveSyncWaiters.current.splice(0).forEach((resolve) => resolve());
     }
   }, [driveToken, applyDriveData]);
 
@@ -610,11 +626,27 @@ export default function App() {
       window.alert('FitLog could not save this workout on this device. Your workout is still open; please export a backup or free device storage, then try Finish & Save again.');
       return;
     }
+    const finishedDriveData: FitLogDriveData = {
+      schemaVersion: 1,
+      exercises,
+      routines,
+      history: nextHistory,
+      bodyWeights,
+      settings,
+      activeWorkout: null
+    };
+    driveDataRef.current = finishedDriveData;
+    if (driveToken) skipNextDriveAutoSync.current = true;
+
     setHistory(nextHistory);
     setActiveWorkout(null);
     setActiveRestTimer(null);
     setCompletedWorkoutSummary(completedEntry);
     setCurrentScreen(0);
+
+    // Local storage is already committed above. Push this exact finished snapshot
+    // now so Drive cannot retain the previous active workout as the latest state.
+    if (driveToken) void syncDriveData(false, finishedDriveData, true);
   };
 
   const handleAddExerciseToActive = (exercise: Exercise, setCount = 1, targetReps = 10, fallbackWeight?: number) => {
@@ -1086,6 +1118,9 @@ export default function App() {
           workout={completedWorkoutSummary}
           unit={settings.weightUnit}
           soundEnabled={settings.soundEnabled}
+          driveConnected={Boolean(driveToken)}
+          driveSyncStatus={driveSyncStatus}
+          driveSyncMessage={driveSyncMessage}
           onClose={() => setCompletedWorkoutSummary(null)}
         />
       )}
