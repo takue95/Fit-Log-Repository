@@ -218,36 +218,41 @@ export const HistoryAndSettingsView: React.FC<HistoryAndSettingsProps> = ({
 
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
-      {/* History header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 text-emerald-300"><History className="h-5 w-5" aria-hidden="true" /></span>
-          <div className="min-w-0">
-            <h2 className="text-xl font-extrabold tracking-tight text-white">Training log</h2>
-            <p className="text-xs text-neutral-400">Workouts, exercise guides, and preferences</p>
+      <div className="sticky top-[calc(6.25rem+env(safe-area-inset-top))] z-30 -mx-4 -mt-4 border-b border-neutral-800 bg-neutral-950/95 px-4 pt-4 pb-2 shadow-lg shadow-black/20 backdrop-blur-md">
+        {/* Training section header and tabs stay together while the list scrolls */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 text-emerald-300"><History className="h-5 w-5" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <h2 className="text-xl font-extrabold tracking-tight text-white">Training Hub</h2>
+              <p className="text-xs text-neutral-400">Workouts, history, exercise library, and settings</p>
+            </div>
           </div>
+          <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
         </div>
-        <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-[10px] font-bold tabular-nums text-neutral-300">{history.length} workouts</span>
-      </div>
 
-      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
-        {([
-          { id: 'history', label: 'Workouts', icon: History },
-          { id: 'exercises', label: 'Exercises', icon: BookOpen },
-          { id: 'settings', label: 'Settings', icon: SettingsIcon }
-        ] as const).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            aria-pressed={activeTab === id}
-            className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11px] font-bold transition whitespace-nowrap ${
-              activeTab === id ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{label}</span>
-          </button>
-        ))}
+        <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900 p-1">
+          {([
+            { id: 'history', label: 'Workouts', icon: History },
+            { id: 'exercises', label: 'Library', icon: BookOpen },
+            { id: 'settings', label: 'Settings', icon: SettingsIcon }
+          ] as const).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => {
+                if (id !== activeTab) setActiveTab(id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              aria-pressed={activeTab === id}
+              className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11px] font-bold transition whitespace-nowrap ${
+                activeTab === id ? 'bg-emerald-500 text-neutral-950 shadow' : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* TAB 1: HISTORY LOG */}

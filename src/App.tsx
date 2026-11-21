@@ -744,7 +744,7 @@ export default function App() {
       hasPulse: !!activeWorkout
     },
     { screen: 3, label: 'Progress', icon: TrendingUp },
-    { screen: 4, label: 'History', icon: History }
+    { screen: 4, label: 'Training', icon: History }
   ];
 
   const driveStatusLabel = driveSyncStatus === 'setup-required'
