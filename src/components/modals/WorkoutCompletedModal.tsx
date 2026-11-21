@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { Trophy, Flame, Clock, Dumbbell, Award, Share2, Check, ArrowRight } from 'lucide-react';
+import { Trophy, Flame, Clock, Dumbbell, Award, Share2, Check, ArrowRight, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { CompletedWorkout } from '../../types/fitness';
 import { playCelebrationChime } from '../../utils/audio';
 
@@ -8,6 +8,9 @@ interface WorkoutCompletedModalProps {
   workout: CompletedWorkout;
   unit: 'lbs' | 'kg';
   soundEnabled: boolean;
+  driveConnected: boolean;
+  driveSyncStatus: 'setup-required' | 'disconnected' | 'connecting' | 'syncing' | 'synced' | 'error';
+  driveSyncMessage: string;
   onClose: () => void;
 }
 
@@ -15,6 +18,9 @@ export const WorkoutCompletedModal: React.FC<WorkoutCompletedModalProps> = ({
   workout,
   unit,
   soundEnabled,
+  driveConnected,
+  driveSyncStatus,
+  driveSyncMessage,
   onClose
 }) => {
   useEffect(() => {
@@ -136,6 +142,34 @@ export const WorkoutCompletedModal: React.FC<WorkoutCompletedModalProps> = ({
             </div>
           </div>
         )}
+
+        <div className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs ${
+          driveSyncStatus === 'error'
+            ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+            : driveSyncStatus === 'synced'
+              ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
+              : 'border-neutral-700 bg-neutral-950/60 text-neutral-300'
+        }`}>
+          {driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting'
+            ? <RefreshCw className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
+            : driveConnected
+              ? <Cloud className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              : <CloudOff className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+          <div>
+            <p className="font-semibold">
+              {driveSyncStatus === 'syncing' || driveSyncStatus === 'connecting'
+                ? 'Workout saved here · syncing to Google Drive…'
+                : driveSyncStatus === 'synced'
+                  ? 'Workout saved and synced to Google Drive'
+                  : driveSyncStatus === 'error'
+                    ? 'Workout saved on this device · Drive sync needs attention'
+                    : 'Workout saved on this device · Google Drive is not connected'}
+            </p>
+            {driveSyncStatus === 'error' && driveSyncMessage && (
+              <p className="mt-0.5 break-words text-rose-200/80">{driveSyncMessage}</p>
+            )}
+          </div>
+        </div>
 
         {/* Exercises summarized */}
         <div className="bg-neutral-950/40 p-3.5 rounded-2xl border border-neutral-800/80 max-h-32 overflow-y-auto space-y-1 text-xs">
