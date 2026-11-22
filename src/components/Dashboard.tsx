@@ -523,19 +523,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-5 animate-in fade-in duration-200">
-      <section className="relative isolate overflow-hidden rounded-[1.4rem] border border-emerald-700/35 bg-[radial-gradient(ellipse_at_95%_5%,rgba(120,169,141,0.13),transparent_32%),radial-gradient(ellipse_at_95%_5%,rgba(41,70,50,0.72),rgba(24,35,27,0.92)_42%,rgba(19,25,21,1)_78%)] px-5 py-5">
+      <section className="relative isolate overflow-hidden rounded-[1.4rem] border border-emerald-700/35 bg-[radial-gradient(ellipse_at_95%_5%,rgba(120,169,141,0.13),transparent_32%),radial-gradient(ellipse_at_95%_5%,rgba(41,70,50,0.72),rgba(24,35,27,0.92)_42%,rgba(19,25,21,1)_78%)] px-4 py-4">
         <div aria-hidden="true" className="pointer-events-none absolute -right-14 top-14 -z-10 h-44 w-44 rounded-full border border-emerald-300/15 shadow-[0_0_0_18px_rgba(120,169,141,0.045),0_0_0_37px_rgba(120,169,141,0.022)]" />
         <p className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.13em] uppercase text-emerald-200">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
-        <h2 className="mt-3 text-[32px] leading-[1.08] font-extrabold tracking-tight text-white">
+        <h2 className="mt-2 text-[29px] leading-[1.06] font-extrabold tracking-tight text-white">
           Make today<br />count.
         </h2>
-        <blockquote className="mt-4 max-w-[18rem] border-l-2 border-emerald-400 pl-3 text-xs leading-relaxed text-neutral-300">
+        <blockquote className="mt-3 max-w-[18rem] border-l-2 border-emerald-400 pl-3 text-xs leading-relaxed text-neutral-300">
           “Strength is built by the work you show up for.”
         </blockquote>
-        <div className="mt-4 rounded-2xl border border-neutral-800/90 bg-neutral-950/70 p-3">
+        <div className="mt-3 rounded-2xl border border-neutral-800/90 bg-neutral-950/70 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300"><CalendarDays className="h-4 w-4" aria-hidden="true" /></span>
@@ -560,8 +560,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span className="block h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all" style={{ width: `${weeklyProgress}%` }} />
           </div>
         </div>
+      </section>
 
-        <section className="mt-3 rounded-2xl border border-emerald-800/40 bg-neutral-950/85 p-3.5 shadow-inner" aria-label="Mesocycle preview">
+<section className="relative overflow-hidden rounded-[1.4rem] border border-emerald-700/55 bg-gradient-to-br from-emerald-950/35 via-neutral-900 to-neutral-900 p-4 shadow-xl shadow-emerald-950/20" aria-label="Mesocycle preview">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full border border-emerald-300/10 shadow-[0_0_0_16px_rgba(120,169,141,0.025)]" />
           {activeTrainingBlock ? (
             <>
               <div className="flex items-start justify-between gap-2">
@@ -615,12 +617,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <button type="button" onClick={onOpenTrainingBlocks} className="shrink-0 rounded-xl border border-emerald-700/60 bg-emerald-950/45 px-3 py-2 text-[10px] font-bold text-emerald-200">Set up</button>
             </div>
           )}
-          {workoutOfDay && (
-            <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-900/80 p-3">
+          {activeWorkout ? (
+            <div className="relative mt-3 rounded-2xl border border-emerald-700/50 bg-neutral-950/85 p-3.5">
+              <span className="text-[8px] font-extrabold uppercase tracking-[.1em] text-emerald-300">Workout in progress</span>
+              <h4 className="mt-1 truncate text-[14px] font-extrabold text-white">{activeWorkout.title}</h4>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[9px] text-neutral-400">{activeWorkout.exercises.length} exercises logged</span>
+                <button type="button" onClick={onResumeActiveWorkout} className="min-h-10 rounded-xl bg-emerald-500 px-4 text-[10px] font-extrabold text-neutral-950 transition hover:bg-emerald-400">Resume workout</button>
+              </div>
+            </div>
+          ) : workoutOfDay ? (
+            <div className="relative mt-3 rounded-2xl border border-neutral-800 bg-neutral-950/85 p-3.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <span className="text-[8px] font-extrabold uppercase tracking-[.1em] text-emerald-300">Workout of the day</span>
-                  <h4 className="mt-1 truncate text-[13px] font-extrabold text-white">{workoutOfDay.title}</h4>
+                  <h4 className="mt-1 truncate text-[14px] font-extrabold text-white">{workoutOfDay.title}</h4>
                   <p className="mt-1 text-[9px] text-neutral-400">{activeTrainingBlock?.splitName ?? selectedSplit} · about {workoutOfDay.estimatedMinutes} min</p>
                 </div>
                 <Dumbbell className="mt-1 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
@@ -634,36 +645,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </section>
-      </section>
-
-      {activeWorkout ? (
-        <section className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-neutral-900 p-3.5">
-          <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /><span className="text-[9px] font-bold tracking-[.1em] uppercase text-emerald-300">Workout in progress</span></div>
-          <h3 className="mt-2 text-lg font-bold text-white">{activeWorkout.title}</h3>
-          <div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-neutral-300">{activeWorkout.exercises.length} exercises logged</span><button onClick={onResumeActiveWorkout} className="rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-neutral-950">Resume workout</button></div>
-        </section>
-      ) : !workoutOfDay ? (
+      {!activeWorkout && !workoutOfDay && (
         <button onClick={onStartEmptyWorkout} className="rounded-2xl border border-emerald-800/50 bg-emerald-950/30 p-4 text-left"><span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Ready when you are</span><span className="mt-1 block text-lg font-bold text-white">Start a workout</span></button>
-      ) : null}
+      )}
 
-      {sectionHeader('Your training week', 'Progress', onNavigateToAnalytics)}
+{sectionHeader('Your training week', 'Progress', onNavigateToAnalytics)}
       <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
-        <div className="flex items-baseline justify-between"><div className="text-[15px] font-extrabold text-white">{thisWeek.length}<span className="ml-1.5 text-[10px] font-medium text-neutral-400">of 5 sessions</span></div><span className="text-[10px] text-neutral-400">{Math.min(100, Math.round((thisWeek.length / 5) * 100))}% of weekly goal</span></div>
-        <div className="mt-3 grid grid-cols-7 gap-1.5">
+        <div className="mb-1 flex items-center justify-between text-[9px] text-neutral-500"><span>Workout activity</span><span>{now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
+        <div className="mt-2 grid grid-cols-7 gap-1.5">
           {dayCells.map((day) => <div key={day.date.toISOString()} className={`flex flex-col items-center gap-1.5 text-[8px] ${day.isToday ? 'font-bold text-neutral-200' : 'text-neutral-500'}`}><span className={`grid h-7 w-7 place-items-center rounded-full border ${day.hasWorkout ? 'border-emerald-800 bg-emerald-950/70 text-emerald-300' : day.isToday ? 'border-emerald-500/60 bg-emerald-950/30 text-emerald-300' : 'border-neutral-700 bg-neutral-800/70 text-neutral-600'}`}>{day.hasWorkout ? <Check className="h-3.5 w-3.5" /> : '·'}</span>{day.label}</div>)}
         </div>
-        <div className="mt-3 grid grid-cols-2 border-t border-neutral-800 pt-2.5">
-          <div><strong className="block text-xs font-bold text-white">{weeklyVolume.toLocaleString()} {settings.weightUnit}</strong><span className="text-[9px] text-neutral-400">Volume this week</span></div>
-          <div className="border-l border-neutral-800 pl-3"><strong className="block text-xs font-bold text-white">{Math.floor(weeklyMinutes / 60)}h {weeklyMinutes % 60}m</strong><span className="text-[9px] text-neutral-400">Time under the bar</span></div>
+        <div className="mt-3 grid grid-cols-3 border-t border-neutral-800 pt-2.5">
+          <div className="min-w-0"><strong className="block truncate text-[11px] font-bold text-white">{weeklyVolume.toLocaleString()} {settings.weightUnit}</strong><span className="text-[8px] text-neutral-400">Volume</span></div>
+          <div className="min-w-0 border-l border-neutral-800 pl-2"><strong className="block truncate text-[11px] font-bold text-white">{Math.floor(weeklyMinutes / 60)}h {weeklyMinutes % 60}m</strong><span className="text-[8px] text-neutral-400">Time</span></div>
+          <div className="min-w-0 border-l border-neutral-800 pl-2"><strong className="block truncate text-[11px] font-bold text-fitlog-gold">{weeklyPRs}</strong><span className="text-[8px] text-neutral-400">PRs · 30d</span></div>
         </div>
       </section>
-
-      <div className="grid grid-cols-2 gap-2.5 mt-0.5">
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3"><span className="text-[9px] font-semibold tracking-wide text-fitlog-gold-soft uppercase">Personal records</span><strong className="mt-1 block text-base font-extrabold text-fitlog-gold">{weeklyPRs}</strong><span className="text-[9px] text-neutral-400">in the last 30 days</span></div>
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3"><span className="text-[9px] font-semibold tracking-wide text-neutral-400 uppercase">Sessions logged</span><strong className="mt-1 block text-base font-extrabold text-white">{thisWeek.length}</strong><span className="text-[9px] text-neutral-400">this training week</span></div>
-      </div>
 
       {sectionHeader('Bodyweight', 'History', onNavigateToAnalytics)}
       <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
