@@ -13,12 +13,13 @@ import {
   TrendingUp,
   Trophy
 } from 'lucide-react';
-import { RoutineTemplate, CompletedWorkout, ActiveWorkout, UserSettings, BodyWeightEntry, Exercise, CoachStartAction } from '../types/fitness';
+import { RoutineTemplate, CompletedWorkout, ActiveWorkout, UserSettings, BodyWeightEntry, Exercise, CoachStartAction, TrainingBlock } from '../types/fitness';
 import { TrendLineChart } from './TrendLineChart';
 import { getAdaptiveSuggestion } from '../utils/fitnessCalc';
 
 interface DashboardProps {
   routines: RoutineTemplate[];
+  trainingBlocks: TrainingBlock[];
   exercises: Exercise[];
   history: CompletedWorkout[];
   bodyWeights: BodyWeightEntry[];
@@ -29,6 +30,8 @@ interface DashboardProps {
   onAddExerciseToActive: (exercise: Exercise, sets?: number, reps?: number, fallbackWeight?: number) => void;
   onStartEmptyWorkout: () => void;
   onStartRoutine: (routine: RoutineTemplate, coachAction?: CoachStartAction) => void;
+  onViewRoutine: (routine: RoutineTemplate) => void;
+  onOpenTrainingBlocks: () => void;
   onResumeActiveWorkout: () => void;
   onNavigateToAnalytics: () => void;
   onNavigateToHistory: () => void;
@@ -77,6 +80,7 @@ const inferCurrentSplit = (
 
 export const Dashboard: React.FC<DashboardProps> = ({
   routines,
+  trainingBlocks,
   exercises,
   history,
   bodyWeights,
@@ -87,6 +91,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddExerciseToActive,
   onStartEmptyWorkout,
   onStartRoutine,
+  onViewRoutine,
+  onOpenTrainingBlocks,
   onResumeActiveWorkout,
   onNavigateToAnalytics,
   onNavigateToHistory,
@@ -198,6 +204,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const nextSessionLabel = selectedSplit === 'Push / Pull / Legs'
     ? `${nextFocus} day`
     : selectedSplit;
+  const activeTrainingBlock = trainingBlocks.find((block) => block.status === 'active' || block.status === 'paused');
+  const blockRoutines = activeTrainingBlock
+    ? (activeTrainingBlock.routineIds || [])
+        .map((id) => routines.find((routine) => routine.id === id))
+        .filter((routine): routine is RoutineTemplate => Boolean(routine))
+    : [];
+  const resolvedBlockRoutines = activeTrainingBlock && blockRoutines.length === 0
+    ? routines.filter((routine) => (activeTrainingBlock.routineTitles || []).some((title) => title.toLowerCase() === routine.title.toLowerCase()))
+    : blockRoutines;
+  const blockSessions = activeTrainingBlock
+    ? recentHistory.filter((workout) => {
+        if (new Date(workout.date).getTime() < new Date(activeTrainingBlock.startDate + 'T00:00:00').getTime()) return false;
+        if (workout.routineId) return activeTrainingBlock.routineIds.includes(workout.routineId);
+        return activeTrainingBlock.routineTitles.some((title) => title.toLowerCase() === workout.title.toLowerCase());
+      })
+    : [];
+  const blockNextRoutine = activeTrainingBlock && resolvedBlockRoutines.length
+    ? resolvedBlockRoutines[blockSessions.length % resolvedBlockRoutines.length]
+    : null;
+  const blockWeek = activeTrainingBlock
+    ? Math.max(1, Math.min(activeTrainingBlock.durationWeeks, Math.floor((
+        (activeTrainingBlock.status === 'paused' && activeTrainingBlock.pausedAt
+          ? new Date(activeTrainingBlock.pausedAt).getTime()
+          : now.getTime()) -
+        new Date(activeTrainingBlock.startDate + 'T00:00:00').getTime() -
+        (activeTrainingBlock.pausedDurationMs || 0)
+      ) / 604800000) + 1))
+    : 1;
+  const blockWeekStart = activeTrainingBlock
+    ? new Date(new Date(activeTrainingBlock.startDate + 'T00:00:00').getTime() + (blockWeek - 1) * 604800000)
+    : localToday;
+  const blockWeekEnd = new Date(blockWeekStart.getTime() + 604800000);
+  const blockWeekSessions = blockSessions.filter((workout) => {
+    const date = new Date(workout.date);
+    return date >= blockWeekStart && date < blockWeekEnd;
+  });
+  const blockWeekPhase = activeTrainingBlock && blockWeek === activeTrainingBlock.durationWeeks
+    ? 'Review'
+    : activeTrainingBlock && activeTrainingBlock.easierWeek === blockWeek
+      ? 'Easier week'
+      : blockWeek === 1 ? 'Starting week' : 'Build';
+  const workoutOfDay = (activeTrainingBlock ? blockNextRoutine : nextRoutine) ?? nextRoutine;
+  const blockWeekPercent = activeTrainingBlock
+    ? Math.round((blockWeek / activeTrainingBlock.durationWeeks) * 100)
+    : 0;
   const sortedWeights = useMemo(
     () => [...bodyWeights].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [bodyWeights]
@@ -510,29 +561,79 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <section className="mt-3 rounded-2xl border border-emerald-800/40 bg-neutral-950/85 p-3.5 shadow-inner" aria-live="polite" aria-label="Training suggestion">
-          <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-fitlog-gold/10 text-fitlog-gold">
-              {selectedInsight.kind === 'target' ? <TrendingUp className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'calves' ? <Target className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'milestone' ? <Trophy className="h-4 w-4" aria-hidden="true" /> : selectedInsight.kind === 'cue' ? <Sparkles className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
-            </span>
-            <span className="text-[9px] font-extrabold uppercase tracking-[.1em] text-emerald-300">Today’s focus</span>
-            <span className="ml-auto min-w-0 truncate text-[8px] font-bold uppercase tracking-wider text-emerald-200">{selectedInsight.label}</span>
-            <span className="shrink-0 text-[8px] font-semibold text-neutral-500">{insightIndex + 1}/{homeCoachInsights.length}</span>
-          </div>
-          <h3 className="mt-2 text-[15px] font-extrabold leading-tight text-white">{selectedInsight.title}</h3>
-          <p className="mt-1 min-h-[2.3em] text-[10px] leading-relaxed text-neutral-400">{selectedInsight.context}</p>
-          <div className="my-2 rounded-xl bg-neutral-900/90 px-3 py-2">
-            <span className="block text-[8px] font-bold uppercase tracking-[.1em] text-neutral-500">{selectedInsight.kicker}</span>
-            <strong className="mt-1 block break-words text-[12px] leading-snug text-emerald-300">{selectedInsight.suggestion}</strong>
-          </div>
-          <button onClick={handleCoachAction} className="flex min-h-10 w-full items-center justify-between gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-left text-[11px] font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-400">
-            <span>{selectedInsight.actionLabel}</span><ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-          </button>
-          <p className="mt-1.5 text-center text-[8px] leading-relaxed text-neutral-500">{selectedInsight.footnote}</p>
-          {homeCoachInsights.length > 1 && (
-            <button type="button" onClick={handleAnotherInsight} className="mt-1 flex min-h-8 w-full items-center justify-center gap-1.5 text-[9px] font-bold text-emerald-300 hover:text-emerald-200">
-              <Sparkles className="h-3 w-3" aria-hidden="true" /> Another insight <ChevronRight className="h-3 w-3" aria-hidden="true" />
-            </button>
+        <section className="mt-3 rounded-2xl border border-emerald-800/40 bg-neutral-950/85 p-3.5 shadow-inner" aria-label="Mesocycle preview">
+          {activeTrainingBlock ? (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[9px] font-extrabold uppercase tracking-[.12em] text-emerald-300">Mesocycle preview</span>
+                  <h3 className="mt-1 truncate text-[15px] font-extrabold leading-tight text-white">{activeTrainingBlock.title}</h3>
+                </div>
+                <span className={'shrink-0 rounded-full border px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider ' + (activeTrainingBlock.status === 'paused' ? 'border-amber-700/50 bg-amber-950/40 text-amber-300' : 'border-emerald-800/60 bg-emerald-950/45 text-emerald-200')}>{activeTrainingBlock.status === 'paused' ? 'Paused' : 'Active'}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[10px] text-neutral-300">Week {blockWeek} of {activeTrainingBlock.durationWeeks} <span className="text-neutral-600">·</span> <strong className="text-white">{blockWeekPhase}</strong></span>
+                <span className="text-[9px] font-semibold text-neutral-400">{Math.round((blockWeekSessions.length / Math.max(1, resolvedBlockRoutines.length)) * 100)}% this week</span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-neutral-800" role="progressbar" aria-label="Mesocycle week progress" aria-valuenow={blockWeekPercent} aria-valuemin={0} aria-valuemax={100}>
+                <span className="block h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-300" style={{ width: blockWeekPercent + '%' }} />
+              </div>
+              <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: 'repeat(' + activeTrainingBlock.durationWeeks + ', minmax(0, 1fr))' }}>
+                {Array.from({ length: activeTrainingBlock.durationWeeks }, (_, index) => {
+                  const week = index + 1;
+                  return <span key={week} className={'rounded-md px-0.5 py-1 text-center text-[8px] font-bold ' + (week === blockWeek ? 'bg-emerald-500 text-neutral-950' : week < blockWeek ? 'bg-emerald-950/70 text-emerald-300' : 'bg-neutral-900 text-neutral-500')}>W{week}</span>;
+                })}
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-neutral-200">This week</span>
+                <span className="text-[9px] text-neutral-400">{blockWeekSessions.length} of {resolvedBlockRoutines.length || activeTrainingBlock.routineIds.length} sessions</span>
+              </div>
+              {resolvedBlockRoutines.length > 0 && (
+                <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                  {resolvedBlockRoutines.slice(0, 3).map((routine) => {
+                    const completed = blockWeekSessions.some((workout) =>
+                      workout.routineId ? workout.routineId === routine.id : workout.title.toLowerCase() === routine.title.toLowerCase()
+                    );
+                    const isNext = routine.id === blockNextRoutine?.id && !completed;
+                    return (
+                      <div key={routine.id} className={'min-w-0 rounded-lg border px-2 py-1.5 ' + (isNext ? 'border-emerald-700/70 bg-emerald-950/35' : completed ? 'border-emerald-900/60 bg-emerald-950/20' : 'border-neutral-800 bg-neutral-900/55')}>
+                        <p className="truncate text-[8px] font-bold text-neutral-200">{routine.title}</p>
+                        <p className={'mt-0.5 truncate text-[8px] ' + (completed ? 'text-emerald-300' : isNext ? 'text-emerald-200' : 'text-neutral-500')}>{completed ? 'Completed' : isNext ? 'Next in rotation' : 'In this week'}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-[9px] font-extrabold uppercase tracking-[.12em] text-emerald-300">Mesocycle preview</span>
+                <h3 className="mt-1 text-[13px] font-extrabold text-white">No active training block</h3>
+                <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">Start an optional block to see your week and rotation here.</p>
+              </div>
+              <button type="button" onClick={onOpenTrainingBlocks} className="shrink-0 rounded-xl border border-emerald-700/60 bg-emerald-950/45 px-3 py-2 text-[10px] font-bold text-emerald-200">Set up</button>
+            </div>
+          )}
+          {workoutOfDay && (
+            <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-900/80 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[8px] font-extrabold uppercase tracking-[.1em] text-emerald-300">Workout of the day</span>
+                  <h4 className="mt-1 truncate text-[13px] font-extrabold text-white">{workoutOfDay.title}</h4>
+                  <p className="mt-1 text-[9px] text-neutral-400">{activeTrainingBlock?.splitName ?? selectedSplit} · about {workoutOfDay.estimatedMinutes} min</p>
+                </div>
+                <Dumbbell className="mt-1 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => onViewRoutine(workoutOfDay)} className="flex min-h-10 items-center justify-center gap-1 rounded-xl border border-neutral-700 bg-neutral-950 px-2 text-[10px] font-bold text-neutral-200 transition hover:border-emerald-700/60">
+                  View workout <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button type="button" onClick={() => onStartRoutine(workoutOfDay)} className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-emerald-500 px-2 text-[10px] font-extrabold text-neutral-950 transition hover:bg-emerald-400">
+                  Start workout <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           )}
         </section>
       </section>
@@ -543,7 +644,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h3 className="mt-2 text-lg font-bold text-white">{activeWorkout.title}</h3>
           <div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-neutral-300">{activeWorkout.exercises.length} exercises logged</span><button onClick={onResumeActiveWorkout} className="rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-neutral-950">Resume workout</button></div>
         </section>
-      ) : nextRoutine ? (
+      ) : nextRoutine && !activeTrainingBlock ? (
         <section className="rounded-2xl border border-emerald-800/60 bg-gradient-to-br from-emerald-950/40 via-neutral-900 to-neutral-900 p-3.5">
           <div className="flex items-center gap-2"><span className="rounded-md bg-emerald-900/70 px-2 py-1 text-[8px] font-bold tracking-[.1em] uppercase text-emerald-200">Next session</span><span className="text-[9px] font-semibold tracking-[.08em] uppercase text-neutral-400">{nextSessionLabel}</span></div>
           <h3 className="mt-2 text-lg leading-tight font-bold text-white">{nextRoutine.title}</h3>

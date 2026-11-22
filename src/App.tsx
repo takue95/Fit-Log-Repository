@@ -84,6 +84,8 @@ export default function App() {
   // Navigation: 0 = Dashboard, 1 = Routines, 2 = Active Workout, 3 = Analytics, 4 = History & Settings
   const [currentScreen, setCurrentScreen] = useState<number>(0);
   const [historyInitialTab, setHistoryInitialTab] = useState<'history' | 'exercises' | 'settings'>('history');
+  const [homeRoutineToOpenId, setHomeRoutineToOpenId] = useState<string | null>(null);
+  const [openTrainingBlocksFromHome, setOpenTrainingBlocksFromHome] = useState(false);
 
   // Persistent States
   const [exercises, setExercises] = useState<Exercise[]>(loadExerciseLibrary);
@@ -973,6 +975,7 @@ export default function App() {
           {currentScreen === 0 && (
             <Dashboard
               routines={routines}
+              trainingBlocks={trainingBlocks}
               exercises={exercises}
               onUpdateSettings={(updates) => setSettings((previous) => ({ ...previous, ...updates }))}
               onUpdateActiveWorkout={(updater) => setActiveWorkout((previous) => previous ? updater(previous) : previous)}
@@ -983,6 +986,14 @@ export default function App() {
               settings={settings}
               onStartEmptyWorkout={handleStartEmptyWorkout}
               onStartRoutine={handleStartRoutine}
+              onViewRoutine={(routine) => {
+                setHomeRoutineToOpenId(routine.id);
+                setCurrentScreen(1);
+              }}
+              onOpenTrainingBlocks={() => {
+                setOpenTrainingBlocksFromHome(true);
+                setCurrentScreen(1);
+              }}
               onResumeActiveWorkout={() => setCurrentScreen(2)}
               onNavigateToAnalytics={() => setCurrentScreen(3)}
               onNavigateToHistory={() => {
@@ -1063,6 +1074,10 @@ export default function App() {
               onAddCustomExercise={(exercise) => setExercises((previous) => [exercise, ...previous])}
               onDeleteRoutine={handleDeleteRoutine}
               onOpenExercisePicker={() => setIsExercisePickerOpen(true)}
+              homeRoutineToOpenId={homeRoutineToOpenId}
+              onHomeRoutineOpened={() => setHomeRoutineToOpenId(null)}
+              openTrainingBlocksFromHome={openTrainingBlocksFromHome}
+              onHomeTrainingBlocksOpened={() => setOpenTrainingBlocksFromHome(false)}
             />
           )}
 

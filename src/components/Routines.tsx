@@ -119,6 +119,10 @@ interface RoutinesProps {
   onAddCustomExercise: (exercise: Exercise) => void;
   onDeleteRoutine: (routineId: string) => void;
   onOpenExercisePicker: () => void;
+  homeRoutineToOpenId: string | null;
+  onHomeRoutineOpened: () => void;
+  openTrainingBlocksFromHome: boolean;
+  onHomeTrainingBlocksOpened: () => void;
 }
 
 const SPLIT_PREFERENCE_KEY = 'fitlog_current_split_v1';
@@ -168,7 +172,11 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   onSaveRoutine,
   onUpdateRoutine,
   onAddCustomExercise,
-  onDeleteRoutine
+  onDeleteRoutine,
+  homeRoutineToOpenId,
+  onHomeRoutineOpened,
+  openTrainingBlocksFromHome,
+  onHomeTrainingBlocksOpened
 }) => {
   const [selectedSplit, setSelectedSplit] = useState<string>(() => {
     const inferred = inferCurrentSplit(routines, history, activeWorkout);
@@ -213,6 +221,24 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     setDraggingExerciseId(null);
     setDropTarget(null);
   };
+
+  useEffect(() => {
+    if (!homeRoutineToOpenId) return;
+    const routine = routines.find((item) => item.id === homeRoutineToOpenId);
+    if (routine) {
+      setShowTrainingBlocks(false);
+      setSplitView('current');
+      setSelectedSplit(splitNameForRoutine(routine));
+      openRoutinePreview(routine);
+    }
+    onHomeRoutineOpened();
+  }, [homeRoutineToOpenId]);
+
+  useEffect(() => {
+    if (!openTrainingBlocksFromHome) return;
+    setShowTrainingBlocks(true);
+    onHomeTrainingBlocksOpened();
+  }, [openTrainingBlocksFromHome]);
 
   const addExerciseToViewedRoutine = (exercise: Exercise) => {
     if (!viewingRoutine || viewingRoutine.exercises.some((item) => item.exerciseId === exercise.id)) return;
