@@ -5,6 +5,9 @@ import {
   CheckCircle2,
   Dumbbell,
   Flag,
+  Layers,
+  Pause,
+  Play,
   Plus,
   TrendingUp
 } from 'lucide-react';
@@ -49,9 +52,11 @@ const getBlockSessions = (block: TrainingBlock, history: CompletedWorkout[]) => 
 
 const getWeekIndex = (block: TrainingBlock) => {
   const start = new Date(block.startDate + 'T00:00:00').getTime();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.max(1, Math.min(block.durationWeeks, Math.floor((today.getTime() - start) / 604800000) + 1));
+  const now = block.status === 'paused' && block.pausedAt
+    ? new Date(block.pausedAt).getTime()
+    : Date.now();
+  const elapsed = now - start - (block.pausedDurationMs || 0);
+  return Math.max(1, Math.min(block.durationWeeks, Math.floor(elapsed / 604800000) + 1));
 };
 
 const formatNumber = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
@@ -66,7 +71,7 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
   onStartRoutine,
   onBack
 }) => {
-  const activeBlock = trainingBlocks.find((block) => block.status === 'active');
+  const activeBlock = trainingBlocks.find((block) => block.status === 'active' || block.status === 'paused');
   const splitOptions = Array.from(new Set(routines.map(splitNameForRoutine)));
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('Hypertrophy block');
@@ -146,11 +151,32 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
       startDate: localDateString(),
       progressionRule,
       easierWeek: easierWeek ? Number(easierWeek) : null,
-      status: 'active'
+      status: 'active',
+      pausedDurationMs: 0
     };
     onUpdateTrainingBlocks([...trainingBlocks, block]);
     setShowForm(false);
     setPreviewWeek(null);
+  };
+
+  const pauseBlock = () => {
+    if (!activeBlock || activeBlock.status !== 'active') return;
+    onUpdateTrainingBlocks(trainingBlocks.map((block) =>
+      block.id === activeBlock.id
+        ? { ...block, status: 'paused', pausedAt: new Date().toISOString() }
+        : block
+    ));
+  };
+
+  const resumeBlock = () => {
+    if (!activeBlock || activeBlock.status !== 'paused') return;
+    const pausedAt = activeBlock.pausedAt ? new Date(activeBlock.pausedAt).getTime() : Date.now();
+    const pausedDurationMs = (activeBlock.pausedDurationMs || 0) + Math.max(0, Date.now() - pausedAt);
+    onUpdateTrainingBlocks(trainingBlocks.map((block) =>
+      block.id === activeBlock.id
+        ? { ...block, status: 'active', pausedAt: undefined, pausedDurationMs }
+        : block
+    ));
   };
 
   const finishBlock = () => {
@@ -202,7 +228,17 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
                     <p className="mt-1 text-[11px] text-neutral-300">{activeBlock.splitName} <span className="px-1 text-neutral-600">/</span> {activeBlock.goal}</p>
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full border border-emerald-700/60 bg-emerald-950/70 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-emerald-300">Active</span>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <span className={'rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider ' + (activeBlock.status === 'paused' ? 'border-amber-700/50 bg-amber-950/50 text-amber-300' : 'border-emerald-700/60 bg-emerald-950/70 text-emerald-300')}>{activeBlock.status === 'paused' ? 'Paused' : 'Active'}</span>
+                  <button
+                    type="button"
+                    onClick={activeBlock.status === 'paused' ? resumeBlock : pauseBlock}
+                    className={'flex min-h-9 items-center gap-1.5 rounded-xl border px-2.5 text-[10px] font-bold transition ' + (activeBlock.status === 'paused' ? 'border-emerald-700/60 bg-emerald-950/60 text-emerald-200 hover:bg-emerald-900/70' : 'border-neutral-700 bg-neutral-950/70 text-neutral-300 hover:border-amber-700/60 hover:text-amber-200')}
+                  >
+                    {activeBlock.status === 'paused' ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                    {activeBlock.status === 'paused' ? 'Resume' : 'Pause'}
+                  </button>
+                </div>
               </div>
 
               <div className="mt-5 flex items-end justify-between gap-3">
@@ -369,7 +405,7 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
         </>
       ) : (
         <>
-          <section className="relative overflow-hidden rounded-3xl border border-emerald-800/40 bg-gradient-to-br from-emerald-950/45 via-neutral-900 to-neutral-900 p-4 shadow-xl shadow-black/20">
+          <section className={(showForm ? 'hidden ' : '') + 'relative overflow-hidden rounded-3xl border border-emerald-800/40 bg-gradient-to-br from-emerald-950/45 via-neutral-900 to-neutral-900 p-4 shadow-xl shadow-black/20'}>
             <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full border border-emerald-400/10" />
             <div className="relative flex items-start gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-emerald-800/60 bg-emerald-950/75 text-emerald-300"><CalendarDays className="h-5 w-5" /></span>
@@ -382,10 +418,7 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
             {!showForm && (
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(true);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                onClick={() => setShowForm(true)}
                 disabled={routines.length === 0}
                 className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-xs font-extrabold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:opacity-50"
               >

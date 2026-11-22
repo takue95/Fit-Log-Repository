@@ -146,7 +146,9 @@ export interface TrainingBlock {
   startDate: string;
   progressionRule: 'double-progression' | 'repeat-and-review';
   easierWeek: number | null;
-  status: 'active' | 'completed';
+  status: 'active' | 'paused' | 'completed';
+  pausedAt?: string;
+  pausedDurationMs?: number;
   completedAt?: string;
 }
 
