@@ -644,16 +644,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h3 className="mt-2 text-lg font-bold text-white">{activeWorkout.title}</h3>
           <div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-neutral-300">{activeWorkout.exercises.length} exercises logged</span><button onClick={onResumeActiveWorkout} className="rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-neutral-950">Resume workout</button></div>
         </section>
-      ) : nextRoutine && !activeTrainingBlock ? (
-        <section className="rounded-2xl border border-emerald-800/60 bg-gradient-to-br from-emerald-950/40 via-neutral-900 to-neutral-900 p-3.5">
-          <div className="flex items-center gap-2"><span className="rounded-md bg-emerald-900/70 px-2 py-1 text-[8px] font-bold tracking-[.1em] uppercase text-emerald-200">Next session</span><span className="text-[9px] font-semibold tracking-[.08em] uppercase text-neutral-400">{nextSessionLabel}</span></div>
-          <h3 className="mt-2 text-lg leading-tight font-bold text-white">{nextRoutine.title}</h3>
-          <p className="mt-1 text-[11px] text-neutral-300 line-clamp-2">{nextRoutine.description}</p>
-          <div className="mt-3 flex items-center justify-between gap-2"><span className="text-[10px] text-neutral-400">{nextRoutine.exercises.length} exercises · {nextRoutine.estimatedMinutes} min</span><button onClick={() => onStartRoutine(nextRoutine)} className="rounded-xl bg-emerald-500 px-3.5 py-2.5 text-xs font-bold text-neutral-950 hover:bg-emerald-400 active:scale-[.98] transition">Start workout <span aria-hidden="true">›</span></button></div>
-        </section>
-      ) : (
+      ) : !workoutOfDay ? (
         <button onClick={onStartEmptyWorkout} className="rounded-2xl border border-emerald-800/50 bg-emerald-950/30 p-4 text-left"><span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Ready when you are</span><span className="mt-1 block text-lg font-bold text-white">Start a workout</span></button>
-      )}
+      ) : null}
 
       {sectionHeader('Your training week', 'Progress', onNavigateToAnalytics)}
       <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5">
