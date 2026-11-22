@@ -98,6 +98,7 @@ export interface PersonalRecord {
 export interface CompletedWorkout {
   id: string;
   title: string;
+  routineId?: string;
   date: string; // ISO string
   durationMinutes: number;
   totalVolume: number;
@@ -132,6 +133,21 @@ export interface RoutineTemplate {
     defaultReps: number;
     targetRpe?: number;
   }[];
+}
+
+export interface TrainingBlock {
+  id: string;
+  title: string;
+  goal: 'Hypertrophy' | 'Strength' | 'General fitness';
+  splitName: string;
+  routineIds: string[];
+  routineTitles: string[];
+  durationWeeks: number;
+  startDate: string;
+  progressionRule: 'double-progression' | 'repeat-and-review';
+  easierWeek: number | null;
+  status: 'active' | 'completed';
+  completedAt?: string;
 }
 
 export interface BodyWeightEntry {

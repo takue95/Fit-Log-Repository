@@ -9,7 +9,8 @@ import {
   BodyWeightEntry, 
   UserSettings, 
   WorkoutExercise,
-  WorkoutSet 
+  WorkoutSet,
+  TrainingBlock
 } from './types/fitness';
 import { INITIAL_EXERCISES } from './data/exercises';
 import { DEFAULT_ROUTINES } from './data/routines';
@@ -29,6 +30,7 @@ import { FitLogDriveData, GOOGLE_DRIVE_CLIENT_ID, loadDriveBackup, mergeDriveDat
 const STORAGE_KEYS = {
   EXERCISES: 'fitlog_exercises_v1',
   ROUTINES: 'fitlog_routines_v1',
+  TRAINING_BLOCKS: 'fitlog_training_blocks_v1',
   HISTORY: 'fitlog_history_v1',
   DELETED_HISTORY_IDS: 'fitlog_deleted_history_ids_v1',
   BODY_WEIGHTS: 'fitlog_body_weights_v1',
@@ -100,6 +102,17 @@ export default function App() {
       return [...parsed, ...routinesToAdd];
     } catch {
       return DEFAULT_ROUTINES;
+    }
+  });
+
+  const [trainingBlocks, setTrainingBlocks] = useState<TrainingBlock[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TRAINING_BLOCKS);
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
   });
 
@@ -194,6 +207,7 @@ export default function App() {
     schemaVersion: 1,
     exercises,
     routines,
+    trainingBlocks,
     history,
     deletedHistoryIds,
     bodyWeights,
@@ -204,6 +218,7 @@ export default function App() {
     schemaVersion: 1,
     exercises,
     routines,
+    trainingBlocks,
     history,
     deletedHistoryIds,
     bodyWeights,
@@ -219,6 +234,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(routines));
   }, [routines]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TRAINING_BLOCKS, JSON.stringify(trainingBlocks));
+  }, [trainingBlocks]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
@@ -247,6 +266,7 @@ export default function App() {
   const applyDriveData = useCallback((data: FitLogDriveData) => {
     setExercises(data.exercises);
     setRoutines(data.routines);
+    setTrainingBlocks(data.trainingBlocks ?? []);
     setHistory(data.history);
     setDeletedHistoryIds(data.deletedHistoryIds ?? []);
     setBodyWeights(data.bodyWeights);
@@ -393,7 +413,7 @@ export default function App() {
     }
     const timeout = window.setTimeout(() => void syncDriveData(false), 1200);
     return () => window.clearTimeout(timeout);
-  }, [driveToken, history, deletedHistoryIds, routines, exercises, bodyWeights, settings, activeWorkout, syncDriveData]);
+  }, [driveToken, history, deletedHistoryIds, routines, trainingBlocks, exercises, bodyWeights, settings, activeWorkout, syncDriveData]);
 
   useEffect(() => {
     if (!driveToken || driveSyncPulse === 0) return;
@@ -664,6 +684,7 @@ export default function App() {
     const completedEntry: CompletedWorkout = {
       id: `workout-log-${Date.now()}`,
       title: activeWorkout.title,
+      routineId: activeWorkout.routineId,
       date: new Date().toISOString(),
       durationMinutes,
       totalVolume,
@@ -688,6 +709,7 @@ export default function App() {
       schemaVersion: 1,
       exercises,
       routines,
+      trainingBlocks,
       history: nextHistory,
       deletedHistoryIds,
       bodyWeights,
@@ -820,6 +842,7 @@ export default function App() {
       exportDate: new Date().toISOString(),
       exercises,
       routines,
+      trainingBlocks,
       history,
       bodyWeights,
       settings
@@ -842,6 +865,7 @@ export default function App() {
         const parsed = JSON.parse(event.target?.result as string);
         if (parsed.history) setHistory(parsed.history);
         if (parsed.routines) setRoutines(parsed.routines);
+        if (Array.isArray(parsed.trainingBlocks)) setTrainingBlocks(parsed.trainingBlocks);
         if (parsed.exercises) setExercises(parsed.exercises);
         if (parsed.bodyWeights) setBodyWeights(parsed.bodyWeights);
         if (parsed.settings) setSettings(parsed.settings);
@@ -1027,6 +1051,9 @@ export default function App() {
           {currentScreen === 1 && (
             <RoutinesView
               routines={routines}
+              trainingBlocks={trainingBlocks}
+              settings={settings}
+              onUpdateTrainingBlocks={setTrainingBlocks}
               exercises={exercises}
               history={history}
               activeWorkout={activeWorkout}

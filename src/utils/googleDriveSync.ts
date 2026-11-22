@@ -4,6 +4,7 @@ import {
   CompletedWorkout,
   Exercise,
   RoutineTemplate,
+  TrainingBlock,
   UserSettings,
   WorkoutExercise,
   WorkoutSet
@@ -25,6 +26,7 @@ export interface FitLogDriveData {
   bodyWeights: BodyWeightEntry[];
   settings: UserSettings;
   activeWorkout: ActiveWorkout | null;
+  trainingBlocks: TrainingBlock[];
 }
 
 interface DriveFileRef {
@@ -262,6 +264,7 @@ export function mergeDriveData(
     updatedAt: new Date().toISOString(),
     exercises: mergeById(preferred.exercises || [], secondary.exercises || []),
     routines: mergeById(preferred.routines || [], secondary.routines || []),
+    trainingBlocks: mergeById(preferred.trainingBlocks || [], secondary.trainingBlocks || []),
     history: mergeById(local.history || [], cloud.history || [])
       .filter((workout) => !deletedHistoryIdSet.has(workout.id))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -274,6 +277,6 @@ export function mergeDriveData(
 }
 
 export function sameDriveData(a: FitLogDriveData, b: FitLogDriveData): boolean {
-  return ['exercises', 'routines', 'history', 'deletedHistoryIds', 'bodyWeights', 'settings', 'activeWorkout']
+  return ['exercises', 'routines', 'trainingBlocks', 'history', 'deletedHistoryIds', 'bodyWeights', 'settings', 'activeWorkout']
     .every((key) => JSON.stringify(a[key as keyof FitLogDriveData]) === JSON.stringify(b[key as keyof FitLogDriveData]));
 }

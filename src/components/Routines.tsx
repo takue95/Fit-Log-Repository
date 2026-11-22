@@ -14,8 +14,9 @@ import {
   Search,
   GripVertical,
 } from 'lucide-react';
-import { RoutineTemplate, Exercise, CompletedWorkout, ActiveWorkout, MuscleGroup, EquipmentType, MUSCLE_GROUPS, EQUIPMENT_TYPES } from '../types/fitness';
+import { RoutineTemplate, Exercise, CompletedWorkout, ActiveWorkout, MuscleGroup, EquipmentType, MUSCLE_GROUPS, EQUIPMENT_TYPES, TrainingBlock, UserSettings } from '../types/fitness';
 import { NumericInput } from './NumericInput';
+import { TrainingBlocksView } from './TrainingBlocks';
 import { MuscleMap } from '@musclemap/react';
 import type { MuscleGroup as MapMuscleGroup, MuscleMapRegion, MuscleMapValues } from '@musclemap/core';
 import maleFront from '@musclemap/assets/bodies/male-front.webp';
@@ -108,6 +109,9 @@ interface RoutinesProps {
   routines: RoutineTemplate[];
   exercises: Exercise[];
   history: CompletedWorkout[];
+  trainingBlocks: TrainingBlock[];
+  settings: UserSettings;
+  onUpdateTrainingBlocks: (blocks: TrainingBlock[]) => void;
   activeWorkout: ActiveWorkout | null;
   onStartRoutine: (routine: RoutineTemplate) => void;
   onSaveRoutine: (routine: RoutineTemplate) => void;
@@ -156,6 +160,9 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
   routines,
   exercises,
   history,
+  trainingBlocks,
+  settings,
+  onUpdateTrainingBlocks,
   activeWorkout,
   onStartRoutine,
   onSaveRoutine,
@@ -173,6 +180,7 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     }
   });
   const [splitView, setSplitView] = useState<'current' | 'browse'>('current');
+  const [showTrainingBlocks, setShowTrainingBlocks] = useState(false);
   const [browsedSplit, setBrowsedSplit] = useState<string>(() => {
     const inferred = inferCurrentSplit(routines, history, activeWorkout);
     try {
@@ -406,6 +414,21 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
     setSelectedExIds([{ exerciseId: 'barbell-bench-press', defaultSets: 3, defaultReps: 8 }]);
   };
 
+  if (showTrainingBlocks) {
+    return (
+      <TrainingBlocksView
+        routines={routines}
+        history={history}
+        trainingBlocks={trainingBlocks}
+        settings={settings}
+        currentSplit={selectedSplit}
+        onUpdateTrainingBlocks={onUpdateTrainingBlocks}
+        onStartRoutine={onStartRoutine}
+        onBack={() => setShowTrainingBlocks(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5 pb-12 animate-in fade-in duration-200">
       {/* Top Banner */}
@@ -415,13 +438,27 @@ export const RoutinesView: React.FC<RoutinesProps> = ({
           <p className="text-xs text-neutral-400">Structured programs & custom templates</p>
         </div>
 
-        <button
-          onClick={() => setIsCreatingRoutine(true)}
-          className="flex shrink-0 self-start items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition"
-        >
-          <Plus className="w-4 h-4" />
-          Create Routine
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowTrainingBlocks(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-800/60 bg-emerald-950/35 px-3.5 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-950/60"
+          >
+            <Layers className="h-4 w-4" />
+            Training blocks
+            {trainingBlocks.some((block) => block.status === 'active') && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-label="Active block" />}
+          </button>
+          <button
+            onClick={() => setIsCreatingRoutine(true)}
+            className="flex shrink-0 self-start items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Create Routine
+          </button>
+        </div>
       </div>
 
       <div className="sticky z-30 -mx-4 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur-md" style={{ top: 'var(--fitlog-app-header-height, 5.75rem)' }}>
