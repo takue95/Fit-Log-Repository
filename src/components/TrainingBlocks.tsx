@@ -7,8 +7,10 @@ import {
   Flag,
   Layers,
   Pause,
+  Pencil,
   Play,
   Plus,
+  Trash2,
   TrendingUp
 } from 'lucide-react';
 import { CompletedWorkout, RoutineTemplate, TrainingBlock, UserSettings } from '../types/fitness';
@@ -81,6 +83,9 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
   const [progressionRule, setProgressionRule] = useState<TrainingBlock['progressionRule']>('double-progression');
   const [easierWeek, setEasierWeek] = useState('');
   const [previewWeek, setPreviewWeek] = useState<number | null>(null);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editingBlockTitle, setEditingBlockTitle] = useState('');
+  const [deleteBlockId, setDeleteBlockId] = useState<string | null>(null);
 
   const displayedSplit = activeBlock?.splitName ?? splitName;
   const selectedRoutines = routines
@@ -190,6 +195,31 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
   };
 
   const completedBlocks = trainingBlocks.filter((block) => block.status === 'completed').slice().reverse();
+
+  const beginBlockRename = (block: TrainingBlock) => {
+    setEditingBlockId(block.id);
+    setEditingBlockTitle(block.title);
+    setDeleteBlockId(null);
+  };
+
+  const saveBlockRename = (blockId: string) => {
+    const nextTitle = editingBlockTitle.trim();
+    if (!nextTitle) return;
+    onUpdateTrainingBlocks(trainingBlocks.map((block) =>
+      block.id === blockId ? { ...block, title: nextTitle } : block
+    ));
+    setEditingBlockId(null);
+    setEditingBlockTitle('');
+  };
+
+  const deleteCompletedBlock = (blockId: string) => {
+    onUpdateTrainingBlocks(trainingBlocks.filter((block) => block.id !== blockId));
+    setDeleteBlockId(null);
+    if (editingBlockId === blockId) {
+      setEditingBlockId(null);
+      setEditingBlockTitle('');
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 pb-12 animate-in fade-in duration-200">
@@ -559,9 +589,59 @@ export const TrainingBlocksView: React.FC<TrainingBlocksProps> = ({
               return (
                 <div key={block.id} className="rounded-2xl border border-neutral-800 bg-neutral-950/55 p-3.5">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><p className="truncate text-xs font-bold text-white">{block.title}</p><p className="mt-1 text-[10px] text-neutral-400">{block.splitName} · {block.durationWeeks} weeks</p></div>
+                    <div className="min-w-0 flex-1">
+                      {editingBlockId === block.id ? (
+                        <div className="space-y-2">
+                          <input
+                            autoFocus
+                            value={editingBlockTitle}
+                            onChange={(event) => setEditingBlockTitle(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                saveBlockRename(block.id);
+                              }
+                              if (event.key === 'Escape') {
+                                setEditingBlockId(null);
+                                setEditingBlockTitle('');
+                              }
+                            }}
+                            maxLength={48}
+                            aria-label="Edit training block name"
+                            className="min-h-10 w-full rounded-xl border border-emerald-700/60 bg-neutral-900 px-3 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                          />
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => saveBlockRename(block.id)} disabled={!editingBlockTitle.trim()} className="min-h-9 rounded-lg bg-emerald-500 px-3 text-[10px] font-bold text-neutral-950 disabled:opacity-50">Save name</button>
+                            <button type="button" onClick={() => { setEditingBlockId(null); setEditingBlockTitle(''); }} className="min-h-9 rounded-lg border border-neutral-700 px-3 text-[10px] font-semibold text-neutral-300">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="truncate text-xs font-bold text-white">{block.title}</p>
+                          <p className="mt-1 text-[10px] text-neutral-400">{block.splitName} · {block.durationWeeks} weeks</p>
+                        </>
+                      )}
+                    </div>
                     <span className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-emerald-300">Review saved</span>
                   </div>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button type="button" onClick={() => beginBlockRename(block)} className="flex min-h-9 items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 text-[10px] font-semibold text-neutral-400 transition hover:border-emerald-800 hover:text-emerald-200">
+                      <Pencil className="h-3 w-3" /> Edit name
+                    </button>
+                    <button type="button" onClick={() => { setDeleteBlockId(block.id); setEditingBlockId(null); }} className="flex min-h-9 items-center gap-1.5 rounded-lg border border-neutral-800 px-2.5 text-[10px] font-semibold text-neutral-400 transition hover:border-rose-900/70 hover:text-rose-300">
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
+                  </div>
+                  {deleteBlockId === block.id && (
+                    <div className="mt-3 rounded-xl border border-amber-800/50 bg-amber-950/20 p-3">
+                      <p className="text-[11px] font-semibold text-amber-100">Delete this saved block?</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">Its block summary will be removed. Workout history and logs will stay in FitLog.</p>
+                      <div className="mt-2.5 flex gap-2">
+                        <button type="button" onClick={() => deleteCompletedBlock(block.id)} className="min-h-9 rounded-lg bg-rose-600 px-3 text-[10px] font-bold text-white">Delete block</button>
+                        <button type="button" onClick={() => setDeleteBlockId(null)} className="min-h-9 rounded-lg border border-neutral-700 px-3 text-[10px] font-semibold text-neutral-300">Keep it</button>
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-3 grid grid-cols-4 gap-2 text-center">
                     {[
                       ['Sessions', sessions.length],
